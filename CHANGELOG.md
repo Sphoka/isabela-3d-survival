@@ -136,3 +136,12 @@
 - **Verificação**:
   - Todas as **9 suítes headless** passaram com `EXIT=0` (`ALL_9_TESTS_PASSED`).
   - `scripts/game/*.gd` mantidos abaixo de 300 linhas (`arena_coordinator.gd` com 203 linhas).
+
+## [2026-11-15 17:57] Workflow CI no GitHub Actions (`.github/workflows/godot-tests.yml`)
+- **Backup criado**: `D:\Godot\isabela_scene_test\.backups\CHANGELOG.md.20261115_175716.bak`.
+- **Adicionado [`.github/workflows/godot-tests.yml`](file:///D:/Godot/isabela_scene_test/.github/workflows/godot-tests.yml)**:
+  - **Triggers**: `pull_request` (`branches: [main]`), `push` (`branches: [main]`) e `workflow_dispatch`, com `concurrency` cancelando execuções anteriores no mesmo ref.
+  - **Checkout enxuto**: `actions/checkout@v4` com `lfs: false` para não baixar os `.blend` de `blend_sources/` via Git LFS no CI.
+  - **Trava `< 300` linhas**: verifica cada arquivo em `scripts/game/*.gd` via `wc -l`, emitindo erro `::error file=...::` se atingir `>= 300` linhas.
+  - **Godot `4.7.2-stable` Linux headless + cache**: faz cache do binário `Godot_v4.7.2-stable_linux.x86_64` em `~/.cache/godot/4.7.2-stable` e de `.godot/imported`, executa `--headless --path . --import` (`timeout 180s`) e roda sequencialmente todas as suítes `tests/test_*.gd` (`timeout 120s` por suíte).
+

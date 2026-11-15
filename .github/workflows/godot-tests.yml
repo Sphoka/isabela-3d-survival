@@ -1,0 +1,115 @@
+name: Godot Headless Tests & Line Guard
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2-stable
+  GODOT_ZIP: Godot_v4.7.2-stable_linux.x86_64.zip
+  GODOT_BIN_NAME: Godot_v4.7.2-stable_linux.x86_64
+
+jobs:
+  headless-ci:
+    name: Line Guard & Headless Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository (skip Git LFS binaries)
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Enforce < 300 lines limit on scripts/game/*.gd
+        shell: bash
+        run: |
+          set -euo pipefail
+          failed=0
+          shopt -s nullglob
+          files=(scripts/game/*.gd)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::No GDScript files found in scripts/game/"
+            exit 1
+          fi
+          for f in "${files[@]}"; do
+            lines=$(wc -l < "$f")
+            printf "%4d  %s\n" "$lines" "$f"
+            if [ "$lines" -ge 300 ]; then
+              echo "::error file=$f::Line count ($lines) violates the < 300 lines limit."
+              failed=1
+            fi
+          done
+          exit "$failed"
+
+      - name: Cache Godot ${{ env.GODOT_VERSION }} headless binary
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/godot/${{ env.GODOT_VERSION }}
+          key: godot-linux-${{ env.GODOT_VERSION }}
+
+      - name: Download Godot ${{ env.GODOT_VERSION }} (Linux x86_64)
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.cache/godot/${GODOT_VERSION}"
+          curl -fsSL -o "/tmp/${GODOT_ZIP}" \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/${GODOT_ZIP}"
+          unzip -q -o "/tmp/${GODOT_ZIP}" -d "$HOME/.cache/godot/${GODOT_VERSION}"
+          chmod +x "$HOME/.cache/godot/${GODOT_VERSION}/${GODOT_BIN_NAME}"
+          rm -f "/tmp/${GODOT_ZIP}"
+
+      - name: Cache Godot imported resources
+        uses: actions/cache@v4
+        with:
+          path: .godot/imported
+          key: godot-imported-${{ env.GODOT_VERSION }}-${{ hashFiles('project.godot', 'assets/**/*.import', 'shaders/**') }}
+          restore-keys: |
+            godot-imported-${{ env.GODOT_VERSION }}-
+
+      - name: Import Godot project headless
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_BIN="$HOME/.cache/godot/${GODOT_VERSION}/${GODOT_BIN_NAME}"
+          "$GODOT_BIN" --version
+          timeout 180s "$GODOT_BIN" --headless --path . --import
+
+      - name: Run all headless test suites (tests/test_*.gd)
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_BIN="$HOME/.cache/godot/${GODOT_VERSION}/${GODOT_BIN_NAME}"
+          shopt -s nullglob
+          tests=(tests/test_*.gd)
+          if [ ${#tests[@]} -eq 0 ]; then
+            echo "::error::No test scripts found matching tests/test_*.gd"
+            exit 1
+          fi
+          passed=0
+          failed=0
+          for t in "${tests[@]}"; do
+            echo "========================================"
+            echo "Running res://$t"
+            echo "========================================"
+            if timeout 120s "$GODOT_BIN" --headless --path . --script "res://$t"; then
+              echo "PASS: $t"
+              passed=$((passed + 1))
+            else
+              status=$?
+              echo "::error file=$t::Test failed with exit code $status"
+              failed=$((failed + 1))
+            fi
+          done
+          echo "========================================"
+          echo "Summary: $passed passed, $failed failed (total ${#tests[@]})"
+          [ "$failed" -eq 0 ]
