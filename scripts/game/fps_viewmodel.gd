@@ -5,13 +5,13 @@ extends Node3D
 const FPS_ARMS_PATH := "res://assets/SK_Isabela/FPS_Arms.glb"
 
 const WEAPON_TWEAKS := {
-	"pistol": {"pos": Vector3(0.0, 0.028, -0.02), "ads_pos": Vector3(-0.092, 0.056, 0.02), "doom_x": -0.092, "recoil_z": 0.055, "recoil_pitch": 0.13},
-	"lightsaber": {"pos": Vector3(0.085, 0.168, -0.03), "ads_pos": Vector3(-0.04, 0.06, 0.0), "rot": Vector3(-0.24, 0.0, -0.42), "doom_x": -0.08, "recoil_z": 0.02, "recoil_pitch": 0.05},
-	"shotgun": {"pos": Vector3(0.032, 0.026, -0.14), "ads_pos": Vector3(-0.088, 0.046, -0.06), "doom_x": -0.092, "recoil_z": 0.095, "recoil_pitch": 0.21},
-	"rocket_launcher": {"pos": Vector3(0.058, 0.034, -0.20), "ads_pos": Vector3(-0.025, 0.045, -0.15), "doom_x": -0.065, "recoil_z": 0.12, "recoil_pitch": 0.24},
-	"katana": {"pos": Vector3(0.085, 0.165, -0.03), "ads_pos": Vector3(-0.04, 0.06, 0.0), "rot": Vector3(-0.22, 0.0, -0.42), "doom_x": -0.08, "recoil_z": 0.02, "recoil_pitch": 0.05},
-	"laser_gun": {"pos": Vector3(0.032, 0.028, -0.13), "ads_pos": Vector3(-0.088, 0.048, -0.05), "doom_x": -0.092, "recoil_z": 0.035, "recoil_pitch": 0.06},
-	"smg": {"pos": Vector3(0.028, 0.024, -0.145), "ads_pos": Vector3(-0.088, 0.048, -0.055), "doom_x": -0.092, "recoil_z": 0.042, "recoil_pitch": 0.08},
+	"pistol": {"pos": Vector3(0.07, -0.06, -0.02), "ads_pos": Vector3(-0.0917, -0.015, 0.03), "rot": Vector3(0.0, 0.025, 0.0), "ads_rot": Vector3.ZERO, "doom_x": -0.0917, "recoil_z": 0.045, "recoil_pitch": 0.08},
+	"lightsaber": {"pos": Vector3(0.09, -0.09, -0.02), "ads_pos": Vector3(-0.02, -0.07, 0.0), "rot": Vector3(-0.18, 0.14, 0.28), "ads_rot": Vector3(-0.10, 0.05, 0.14), "doom_x": -0.09, "recoil_z": 0.02, "recoil_pitch": 0.04},
+	"shotgun": {"pos": Vector3(0.08, -0.07, -0.05), "ads_pos": Vector3(-0.0917, -0.025, -0.01), "rot": Vector3(0.0, 0.025, 0.0), "ads_rot": Vector3.ZERO, "doom_x": -0.0917, "recoil_z": 0.085, "recoil_pitch": 0.14},
+	"rocket_launcher": {"pos": Vector3(0.11, -0.08, -0.10), "ads_pos": Vector3(-0.04, -0.05, -0.08), "rot": Vector3(0.0, 0.02, 0.0), "ads_rot": Vector3.ZERO, "doom_x": -0.0917, "recoil_z": 0.10, "recoil_pitch": 0.16},
+	"katana": {"pos": Vector3(0.09, -0.10, -0.02), "ads_pos": Vector3(-0.02, -0.08, 0.0), "rot": Vector3(-0.20, 0.16, 0.32), "ads_rot": Vector3(-0.12, 0.06, 0.16), "doom_x": -0.09, "recoil_z": 0.02, "recoil_pitch": 0.04},
+	"laser_gun": {"pos": Vector3(0.08, -0.07, -0.04), "ads_pos": Vector3(-0.0917, -0.022, -0.01), "rot": Vector3(0.0, 0.025, 0.0), "ads_rot": Vector3.ZERO, "doom_x": -0.0917, "recoil_z": 0.030, "recoil_pitch": 0.05},
+	"smg": {"pos": Vector3(0.08, -0.07, -0.04), "ads_pos": Vector3(-0.0917, -0.025, -0.01), "rot": Vector3(0.0, 0.025, 0.0), "ads_rot": Vector3.ZERO, "doom_x": -0.0917, "recoil_z": 0.036, "recoil_pitch": 0.06},
 }
 
 var doom_centered: bool = false
@@ -38,6 +38,10 @@ var _melee_left: float = 0.0
 var _melee_total: float = 0.24
 var _melee_combo: int = 1
 var _oneshot_left: float = 0.0
+var _overheat_active: bool = false
+var _overheat_phase: float = 0.0
+var _cool_ready_left: float = 0.0
+var _tint_overlay: StandardMaterial3D = null
 
 
 func _ready() -> void:
@@ -118,6 +122,9 @@ func set_weapon(def: Dictionary) -> void:
 	_disable_shadows_recursive(_active_weapon)
 	_muzzle_node = _active_weapon.get_node_or_null("Muzzle") as Node3D
 	_draw_left = 0.22
+	_overheat_active = false
+	_cool_ready_left = 0.0
+	_reload_left = 0.0
 	if visible:
 		_play_clip("FPS_Draw", 0.08, true)
 	if str(def.get("id", "")) == "lightsaber":
@@ -149,6 +156,19 @@ func trigger_reload(duration_s: float) -> void:
 	_play_clip("FPS_Reload", 0.08, true)
 
 
+func trigger_laser_overheat(_lockout_s: float = 1.8) -> void:
+	_overheat_active = true
+	_overheat_phase = 0.0
+	_cool_ready_left = 0.0
+	_set_weapon_overlay(Color(1.0, 0.30, 0.06, 0.42))
+
+
+func trigger_laser_ready() -> void:
+	_overheat_active = false
+	_cool_ready_left = 0.40
+	_set_weapon_overlay(Color(0.25, 0.92, 1.0, 0.38))
+
+
 func trigger_melee(combo_step: int, duration_s: float) -> void:
 	_melee_combo = clampi(combo_step, 1, 3)
 	_melee_total = maxf(0.16, duration_s)
@@ -173,25 +193,39 @@ func update_viewmodel(delta: float, h_speed: float, max_speed: float, on_floor: 
 	else:
 		_reload_left = 0.0
 	_melee_left = maxf(0.0, _melee_left - delta)
+	if _overheat_active:
+		_overheat_phase = fmod(_overheat_phase + delta * 22.0, TAU)
+		_set_weapon_overlay(Color(1.0, 0.28, 0.06, 0.28 + 0.16 * absf(sin(_overheat_phase * 0.35))))
+	elif _cool_ready_left > 0.0:
+		_cool_ready_left = maxf(0.0, _cool_ready_left - delta)
+		if _cool_ready_left <= 0.0:
+			_set_weapon_overlay(Color(0.0, 0.0, 0.0, 0.0))
+		else:
+			_set_weapon_overlay(Color(0.25, 0.92, 1.0, (_cool_ready_left / 0.40) * 0.40))
 
 	var wid := str(_weapon_def.get("id", "pistol"))
 	var tw: Dictionary = WEAPON_TWEAKS.get(wid, WEAPON_TWEAKS["pistol"])
 	var base_pos: Vector3 = tw.get("pos", Vector3.ZERO)
 	var base_rot: Vector3 = tw.get("rot", Vector3.ZERO)
 	if doom_centered:
-		base_pos.x += float(tw.get("doom_x", -0.092))
-		base_pos.y += 0.022
-		base_rot = Vector3.ZERO
+		base_pos.x += float(tw.get("doom_x", -0.171))
+		base_pos.y += 0.015
+		base_rot = tw.get("ads_rot", base_rot)
 	elif is_aiming and not is_reloading and _melee_left <= 0.0:
 		base_pos = tw.get("ads_pos", base_pos)
-		base_rot = Vector3.ZERO
+		base_rot = tw.get("ads_rot", base_rot)
 
 	var aim_scale := 0.35 if is_aiming else 1.0
 	var proc_scale := 0.22 if _has_arms_asset else 1.0
+	var anim_scale := maxf(0.55, proc_scale)
 	var bob_x := cos(_bob_phase * 0.5) * 0.011 * move_ratio * aim_scale
 	var bob_y := absf(sin(_bob_phase)) * -0.012 * move_ratio * aim_scale + sin(_breath_phase) * 0.0025
 	var draw_drop := (_draw_left / 0.22) * -0.14 * proc_scale if _draw_left > 0.0 else 0.0
-	var reload_dip := sin((1.0 - _reload_left / _reload_total) * PI) * -0.11 * proc_scale if _reload_left > 0.0 else 0.0
+	var reload_dip := sin((1.0 - _reload_left / _reload_total) * PI) * -0.11 * anim_scale if _reload_left > 0.0 else 0.0
+	var oh_pos := Vector3(0.03 * anim_scale + sin(_overheat_phase) * 0.004, -0.045 * anim_scale, 0.025 * anim_scale) if _overheat_active else Vector3.ZERO
+	var cool_z := sin((1.0 - _cool_ready_left / 0.40) * PI) * -0.035 * anim_scale if _cool_ready_left > 0.0 else 0.0
+	var oh_rot := Vector3(0.16 * anim_scale, 0.24 * anim_scale, -0.44 * anim_scale) if _overheat_active else Vector3.ZERO
+	var cool_pitch := sin((1.0 - _cool_ready_left / 0.40) * PI) * 0.09 * anim_scale if _cool_ready_left > 0.0 else 0.0
 
 	var melee_pos := Vector3.ZERO
 	var melee_rot := Vector3.ZERO
@@ -208,9 +242,9 @@ func update_viewmodel(delta: float, h_speed: float, max_speed: float, on_floor: 
 			melee_pos = Vector3(-0.04 * arc, lerpf(0.14, -0.18, prog) * proc_scale, -0.18 * arc)
 			melee_rot = Vector3(lerpf(0.55, -1.15, prog) * proc_scale, 0.12 * arc, -0.25 * arc)
 
-	_rig_root.position = base_pos + Vector3(bob_x + _sway_offset.x, bob_y + _sway_offset.y + draw_drop + reload_dip, _recoil_z) + melee_pos
-	var reload_roll := sin((1.0 - _reload_left / _reload_total) * PI) * 0.42 * proc_scale if _reload_left > 0.0 else 0.0
-	_rig_root.rotation = base_rot + Vector3(_recoil_pitch - _sway_offset.y * 1.4 - (_draw_left / 0.22) * 0.35 * proc_scale, -_sway_offset.x * 1.6, reload_roll) + melee_rot
+	_rig_root.position = base_pos + Vector3(bob_x + _sway_offset.x, bob_y + _sway_offset.y + draw_drop + reload_dip, _recoil_z + cool_z) + melee_pos + oh_pos
+	var reload_roll := sin((1.0 - _reload_left / _reload_total) * PI) * 0.42 * anim_scale if _reload_left > 0.0 else 0.0
+	_rig_root.rotation = base_rot + Vector3(_recoil_pitch + cool_pitch - _sway_offset.y * 1.4 - (_draw_left / 0.22) * 0.35 * proc_scale, -_sway_offset.x * 1.6, reload_roll) + melee_rot + oh_rot
 
 	if _oneshot_left <= 0.0 and _melee_left <= 0.0 and _reload_left <= 0.0:
 		var loco_clip := "FPS_Walk" if move_ratio > 0.22 and on_floor else "FPS_Idle"
@@ -246,3 +280,18 @@ func _disable_shadows_recursive(node: Node) -> void:
 		(node as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for c in node.get_children():
 		_disable_shadows_recursive(c)
+
+
+func _set_weapon_overlay(col: Color) -> void:
+	if _active_weapon == null:
+		return
+	var mat: StandardMaterial3D = null
+	if col.a > 0.001:
+		if _tint_overlay == null:
+			_tint_overlay = StandardMaterial3D.new()
+			_tint_overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			_tint_overlay.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_tint_overlay.albedo_color = col
+		mat = _tint_overlay
+	for m in _active_weapon.find_children("*", "MeshInstance3D", true, false):
+		(m as MeshInstance3D).material_overlay = mat

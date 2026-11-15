@@ -34,6 +34,14 @@ func configure(cam_cfg: Dictionary) -> void:
 	_apply_rig_targets(true, false, false)
 
 
+func apply_user_settings(mouse_sens: float, controller_sens: float, fov_deg: float) -> void:
+	_cfg["mouse_sensitivity"] = mouse_sens
+	_cfg["controller_sensitivity"] = controller_sens
+	_cfg["fov_normal_deg"] = fov_deg
+	_cfg["fps_fov_normal_deg"] = clampf(fov_deg + 20.0, 68.0, 110.0)
+	_apply_rig_targets(true, false, false)
+
+
 func set_fps_mode(enabled: bool, immediate: bool = true) -> void:
 	is_fps_mode = enabled
 	pitch = _clamp_pitch(pitch)

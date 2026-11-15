@@ -10,6 +10,7 @@ signal died(enemy: Node3D, enemy_id: String, xp_reward: int, score_reward: int, 
 signal took_damage(amount: float, is_crit: bool)
 
 var enemy_id: String = "droid_small"
+var last_weapon_id: String = ""
 var max_hp: float = 55.0
 var current_hp: float = 55.0
 var move_speed_mps: float = 4.6
@@ -29,10 +30,15 @@ var _pending_attack: String = ""
 var _knockback_vel: Vector3 = Vector3.ZERO
 var _dead: bool = false
 var _stride_phase: float = 0.0
+var _idle_phase: float = 0.0
+var _arm_windup_blend: float = 0.0
 var _flash_left: float = 0.0
 var _hp_bar_fill: MeshInstance3D
 var _foot_l: Node3D
 var _foot_r: Node3D
+var _skeleton: Skeleton3D
+var _arm_bones: Dictionary = {}
+var _arm_rest: Dictionary = {}
 var _meshes: Array[MeshInstance3D] = []
 var _flash_mat: StandardMaterial3D
 
@@ -44,6 +50,7 @@ func _ready() -> void:
 	_ensure_collision_and_bar()
 	_foot_l = find_child("Target_Foot_L", true, false) as Node3D
 	_foot_r = find_child("Target_Foot_R", true, false) as Node3D
+	_setup_arm_bones()
 	_collect_body_meshes()
 
 
@@ -79,6 +86,7 @@ func configure_from_balance(id: String, db: BalanceDBRef, wave_spec: Dictionary,
 func take_damage(amount: float, impulse: Vector3 = Vector3.ZERO, is_crit: bool = false, _weapon_id: String = "", tall_armor_pierce: float = 1.0) -> void:
 	if _dead or amount <= 0.0:
 		return
+	last_weapon_id = _weapon_id
 	var final_dmg := amount * (tall_armor_pierce if enemy_id == "droid_tall" else 1.0)
 	current_hp = maxf(0.0, current_hp - final_dmg)
 	_knockback_vel += Vector3(impulse.x, 0.0, impulse.z) * (1.0 - knockback_resistance)
@@ -205,10 +213,48 @@ func _steer_around_obstacles(dir: Vector3) -> Vector3:
 func _animate_ik_targets(delta: float) -> void:
 	var h_spd := Vector2(velocity.x, velocity.z).length()
 	_stride_phase += delta * clampf(h_spd * 2.0, 0.0, 14.0)
+	_idle_phase += delta * 2.4
 	if _foot_l != null and _foot_r != null:
 		var s := sin(_stride_phase) * 0.22 * clampf(h_spd / 3.0, 0.0, 1.0)
 		_foot_l.position = Vector3(0.14, maxf(0.04, cos(_stride_phase) * 0.14), s)
 		_foot_r.position = Vector3(-0.14, maxf(0.04, -cos(_stride_phase) * 0.14), -s)
+	_animate_arms(delta, h_spd)
+
+
+func _setup_arm_bones() -> void:
+	var skels := find_children("*", "Skeleton3D", true, false)
+	_skeleton = skels[0] as Skeleton3D if not skels.is_empty() else null
+	if _skeleton == null:
+		return
+	var map := {"clav_l": ["shoulder.L", "clavicle.L"], "clav_r": ["shoulder.R", "clavicle.R"], "upper_l": ["upper_arm.L"], "upper_r": ["upper_arm.R"], "fore_l": ["forearm.L"], "fore_r": ["forearm.R"]}
+	for k in map:
+		for b in map[k]:
+			var idx := _skeleton.find_bone(b)
+			if idx >= 0:
+				_arm_bones[k] = idx
+				_arm_rest[k] = _skeleton.get_bone_rest(idx).basis.get_rotation_quaternion()
+				break
+
+func _set_arm_rot(key: String, euler_rad: Vector3) -> void:
+	if _arm_bones.has(key):
+		_skeleton.set_bone_pose_rotation(_arm_bones[key], _arm_rest[key] * Quaternion.from_euler(euler_rad))
+
+func _animate_arms(delta: float, h_spd: float) -> void:
+	if _skeleton == null or _arm_bones.is_empty():
+		return
+	var spd := clampf(h_spd / 3.0, 0.0, 1.0)
+	var swing := sin(_stride_phase) * 0.58 * spd
+	var breathe := sin(_idle_phase) * 0.05
+	_arm_windup_blend = move_toward(_arm_windup_blend, 1.0 if _windup_left > 0.0 else 0.0, delta * 9.0)
+	var r := _pending_attack == "ranged"
+	var wb := _arm_windup_blend
+	var shrug := cos(_stride_phase) * 0.08 * spd
+	_set_arm_rot("clav_l", Vector3(0.22 * wb, 0.0, shrug))
+	_set_arm_rot("clav_r", Vector3(0.22 * wb, 0.0, shrug))
+	_set_arm_rot("upper_l", Vector3(swing - 0.10 + breathe, 0.0, -0.10).lerp(Vector3(-0.45 if r else -1.35, 0.0, -0.18 if r else -0.35), wb))
+	_set_arm_rot("upper_r", Vector3(-swing - 0.10 - breathe, 0.0, 0.10).lerp(Vector3(-1.45 if r else -1.35, 0.0, 0.08 if r else 0.35), wb))
+	_set_arm_rot("fore_l", Vector3(-0.32 - maxf(0.0, -swing) * 0.65, 0.0, 0.0).lerp(Vector3(-0.85 if r else -0.75, 0.0, 0.0), wb))
+	_set_arm_rot("fore_r", Vector3(-0.32 - maxf(0.0, swing) * 0.65, 0.0, 0.0).lerp(Vector3(-0.18 if r else -0.75, 0.0, 0.0), wb))
 
 
 func _ensure_collision_and_bar() -> void:

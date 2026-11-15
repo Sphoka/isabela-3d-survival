@@ -69,6 +69,10 @@ static func make_sfx(sfx_id: String) -> AudioStreamWAV:
 			dur = 0.10
 		"reload":
 			dur = 0.22
+		"upgrade_appear":
+			dur = 0.45
+		"metal_click":
+			dur = 0.08
 	var n := maxi(64, int(dur * float(SR_SFX)))
 	var pcm := PackedByteArray()
 	pcm.resize(n * 2)
@@ -131,4 +135,14 @@ static func _sample_sfx(id: String, t: float, u: float, rng: RandomNumberGenerat
 		"reload":
 			var click := 1.0 if (u < 0.18 or (u > 0.55 and u < 0.75)) else 0.1
 			return rng.randf_range(-1.0, 1.0) * click * 0.55
+		"upgrade_appear":
+			var arp := [523.25, 659.25, 783.99, 1046.5]
+			var step := mini(3, int(u * 4.0))
+			var freq: float = arp[step]
+			var env := sin(minf(u * 6.0, 1.0) * PI * 0.5) * exp(-maxf(0.0, u - 0.15) * 2.8)
+			return (sin(TAU * freq * t) * 0.42 + sin(TAU * freq * 1.5 * t) * 0.14) * env
+		"metal_click":
+			var ring := sin(TAU * 2450.0 * t) * 0.45 + sin(TAU * 3880.0 * t) * 0.30 + sin(TAU * 5240.0 * t) * 0.18
+			var snap := rng.randf_range(-1.0, 1.0) * 0.35 * exp(-u * 42.0)
+			return (ring * exp(-u * 26.0) + snap) * 0.75
 	return sin(TAU * 440.0 * t) * exp(-u * 8.0) * 0.4

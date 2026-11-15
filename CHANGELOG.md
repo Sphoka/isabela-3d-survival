@@ -1,5 +1,16 @@
 # CHANGELOG — Projeto Isabela 3D
 
+## [2026-11-15] Upgrade Confirm-Only, Auto-Reload, Laser Overheat/Cooldown Anims & "Você Morreu"
+- **`scripts/game/upgrade_modal_ui.gd`**:
+  - Clicking the upgrade card body (`btn.pressed`) now only focuses/highlights the card (`_set_selected_index`), requiring an explicit click on the **CONFIRMAR** button (or `1`/`2`/`3` / gamepad `X`/`Y`/`B`) to apply the upgrade.
+- **`scripts/game/player_combat_helper.gd` & `scripts/game/fps_viewmodel.gd`**:
+  - Added `_sync_weapon_state_anims` to detect state transitions on both manual `[R]` and automatic empty-magazine reloads, triggering reload SFX + TPS/FPS reload animations.
+  - Added `trigger_laser_overheat` (thermal jitter, tilted vent pose, pulsing orange-red overlay) and `trigger_laser_ready` (cool-down snap-back + cyan ready flash) when the Laser Gun overheats and cools down.
+- **`scripts/game/game_over_modal_ui.gd`**:
+  - Updated the centered Game Over title to **`VOCÊ MORREU`** alongside the existing summary and menu buttons (`JOGAR NOVAMENTE`, `MENU PRINCIPAL`).
+- **`tests/test_menus_and_settings.gd`**:
+  - Added unit coverage for confirm-only card selection, `VOCÊ MORREU` title, and FPS viewmodel reload/overheat/ready animations.
+
 ## 2026-11-13
 - **Created** `data/game_balance.json`: Added full playable wave-survival game configuration (arena bounds, `SK_Isabela` player physics/camera/dash, 6 weapons with combat balance and 3D `.glb` modeling specs/offsets, 2 pickup crates, `SK_Droid_Small` & `SK_Droid_Tall` enemy stats, wave progression curves, rarity weights, and 10 stackable upgrades). Validated via Godot 4.7.2 `--headless` JSON parse check (`JSON_OK weapons=6 pickups=2 upgrades=10`).
 - **Created** `GAME_DESIGN.md`: Added complete Game Design & Godot 4.7.2 modular technical architecture document (`res://scenes/game/` + `res://scripts/game/`), non-interference rules preserving `main_isabela_scene.tscn`, verified bone/blendshape references, 3D modeling briefs for `@blender-author`, and verification acceptance criteria.
@@ -162,4 +173,17 @@
   - [`scripts/game/arena_coordinator.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/arena_coordinator.gd) & [`scripts/game/player_combat_helper.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/player_combat_helper.gd): ligados todos os eventos sonoros de tiro, corte, recarga, acerto, explosões, coleta, level-up, onda e pausa.
 - **Testes**:
   - Adicionada suíte [`tests/test_trilha_a_audio_and_destruction.gd`](file:///D:/Godot/isabela_scene_test/tests/test_trilha_a_audio_and_destruction.gd); todas as **10 suítes headless** passaram (`TOTAL_FAILED=0`) e todos os `scripts/game/*.gd` estão `< 300` linhas (máximo `299` em `player_animator.gd`, `295` em `weapon_manager.gd`).
+
+## [2026-11-15 15:40] Ponto 2 — Interface, Menus & UX (Menu Duna Sci-Fi, Configurações, Pausa & Game Over Roguelite)
+- **Backups criados**: `.backups/20261115_153154/` (`hud_controller.gd`, `game_manager.gd`, `arena_coordinator.gd`, `player_camera_rig.gd`, `weapon_manager.gd`, `audio_manager.gd`, `enemy_droid.gd`, `CHANGELOG.md`).
+- **Menu Principal Estilo Duna**:
+  - Criados [`scenes/game/main_menu.tscn`](file:///c:/Users/sphok/isabela-3d-survival/scenes/game/main_menu.tscn), [`scripts/game/main_menu_controller.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/main_menu_controller.gd) e [`scripts/game/dune_backdrop.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/dune_backdrop.gd): atmosfera desértica crepuscular com silhuetas de dunas, nave orbital e partículas de poeira/especiaria, botões `INICIAR MISSÃO`, `CONFIGURAÇÕES`, `COMO JOGAR & CONTROLES` e `SAIR`, com navegação completa por Teclado/Gamepad e trilha sonora.
+- **Sistema de Configurações & Persistência**:
+  - Criados [`scripts/game/settings_manager.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/settings_manager.gd) e [`scripts/game/settings_modal_ui.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/settings_modal_ui.gd): persistência em `user://settings.cfg` com abas `ÁUDIO` (Master, Música, SFX), `VÍDEO` (Tela Cheia, V-Sync, FOV) e `CONTROLES` (Sensibilidade Mouse/Gamepad, modo padrão FPS), com alternância de abas via `LB`/`RB`.
+  - Integrado suporte em [`scripts/game/audio_manager.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/audio_manager.gd) e [`scripts/game/player_camera_rig.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/player_camera_rig.gd).
+- **Menu de Pausa Completo & Game Over Roguelite**:
+  - Criados [`scripts/game/pause_modal_ui.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/pause_modal_ui.gd) e [`scripts/game/game_over_modal_ui.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/game_over_modal_ui.gd), integrados em [`scripts/game/hud_controller.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/hud_controller.gd).
+  - Atualizados [`scripts/game/game_manager.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/game_manager.gd), [`scripts/game/enemy_droid.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/enemy_droid.gd) e [`scripts/game/arena_coordinator.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/arena_coordinator.gd) para rastrear dano total por arma, abates por tipo, tempo de corrida e retornar ao `main_menu.tscn`.
+- **Verificação**:
+  - Criada suíte [`tests/test_menus_and_settings.gd`](file:///c:/Users/sphok/isabela-3d-survival/tests/test_menus_and_settings.gd); todas as **11 suítes headless** passaram (`ALL_11_TESTS_PASSED`) e todos os scripts em `scripts/game/*.gd` estão estritamente abaixo de 300 linhas.
 
