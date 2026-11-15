@@ -7,6 +7,8 @@ const GameManagerRef := preload("res://scripts/game/game_manager.gd")
 const PlayerControllerRef := preload("res://scripts/game/player_controller.gd")
 const WaveSpawnerRef := preload("res://scripts/game/wave_spawner.gd")
 const HUDControllerRef := preload("res://scripts/game/hud_controller.gd")
+const AudioManagerRef := preload("res://scripts/game/audio_manager.gd")
+const ArenaPropsRef := preload("res://scripts/game/arena_props.gd")
 
 @export var droid_small_scene: PackedScene
 @export var droid_tall_scene: PackedScene
@@ -18,6 +20,8 @@ var hud: HUDControllerRef
 
 var _ship: Node3D
 var _water_mat: ShaderMaterial
+var _audio: AudioManagerRef
+var _arena_props: ArenaPropsRef
 var _capture_mouse: bool = true
 var _bootstrapped: bool = false
 
@@ -78,11 +82,14 @@ func _bind_scene_nodes() -> void:
 		wave_spawner.droid_small_scene = droid_small_scene
 	if droid_tall_scene != null:
 		wave_spawner.droid_tall_scene = droid_tall_scene
-	wave_spawner.setup(game_manager.balance_db, entities, player, _ship)
+	_setup_audio_and_props()
+	wave_spawner.setup(game_manager.balance_db, entities, player, _ship, _arena_props)
 	hud.bind(game_manager, player)
 
 	if not game_manager.wave_started.is_connected(_on_wave_started):
 		game_manager.wave_started.connect(_on_wave_started)
+	if not game_manager.upgrade_modal_opened.is_connected(_on_upgrade_modal_opened):
+		game_manager.upgrade_modal_opened.connect(_on_upgrade_modal_opened)
 	if not game_manager.upgrade_applied.is_connected(player.apply_upgrade_result):
 		game_manager.upgrade_applied.connect(player.apply_upgrade_result)
 	if not game_manager.lifesteal_triggered.is_connected(player.heal):
@@ -91,22 +98,35 @@ func _bind_scene_nodes() -> void:
 		game_manager.state_changed.connect(_on_state_changed)
 	if not player.died.is_connected(game_manager.trigger_game_over):
 		player.died.connect(game_manager.trigger_game_over)
+	if not player.damaged.is_connected(_on_player_hurt):
+		player.damaged.connect(_on_player_hurt)
+	if not player.hit_confirmed.is_connected(_on_player_hit):
+		player.hit_confirmed.connect(_on_player_hit)
 	if not player.water_ripple_emitted.is_connected(_on_water_ripple):
 		player.water_ripple_emitted.connect(_on_water_ripple)
+	var wm := player.get_node_or_null("WeaponManager")
+	if wm != null and wm.has_signal("shot_executed") and not wm.is_connected("shot_executed", _on_weapon_shot):
+		wm.connect("shot_executed", _on_weapon_shot)
 	if not wave_spawner.enemy_spawned.is_connected(_on_enemy_spawned):
 		wave_spawner.enemy_spawned.connect(_on_enemy_spawned)
+	if not wave_spawner.crate_spawned.is_connected(_on_crate_spawned):
+		wave_spawner.crate_spawned.connect(_on_crate_spawned)
 	if not hud.restart_requested.is_connected(_on_restart):
 		hud.restart_requested.connect(_on_restart)
 
 
 func _start_game(manage_pause: bool = true) -> void:
 	game_manager.start_run(manage_pause)
+	if _audio != null:
+		_audio.start_music()
 	_update_mouse_mode(game_manager.state)
 
 
 func _on_wave_started(_wave: int, spec: Dictionary) -> void:
 	wave_spawner.queue_wave(spec)
 	wave_spawner.spawn_ambient_wave_crate()
+	if _audio != null:
+		_audio.play_sfx("wave_start")
 
 
 func _on_enemy_spawned(enemy: Node3D) -> void:
@@ -119,6 +139,58 @@ func _on_enemy_died(_e: Node3D, enemy_id: String, xp: int, sc: int, drop_chance:
 	var avg_ammo := _compute_avg_ammo_ratio()
 	wave_spawner.maybe_drop_crate_at(pos, drop_chance, hp_ratio, avg_ammo)
 	game_manager.notify_enemy_killed(enemy_id, xp, sc)
+	if _audio != null:
+		_audio.play_sfx("droid_explode")
+
+
+func _setup_audio_and_props() -> void:
+	_audio = get_node_or_null("AudioManager") as AudioManagerRef
+	if _audio == null:
+		_audio = AudioManagerRef.new()
+		_audio.name = "AudioManager"
+		add_child(_audio)
+	_arena_props = get_node_or_null("ArenaProps") as ArenaPropsRef
+	if _arena_props == null:
+		_arena_props = ArenaPropsRef.new()
+		_arena_props.name = "ArenaProps"
+		add_child(_arena_props)
+	_arena_props.build_arena_props()
+	for barrel in _arena_props.get_barrels():
+		if is_instance_valid(barrel) and not barrel.exploded.is_connected(_on_barrel_exploded):
+			barrel.exploded.connect(_on_barrel_exploded)
+
+
+func _on_weapon_shot(weapon_id: String) -> void:
+	if _audio != null:
+		_audio.play_weapon_shot(weapon_id)
+
+
+func _on_player_hit(_is_crit: bool, _is_kill: bool) -> void:
+	if _audio != null:
+		_audio.play_sfx("droid_hit", 0.12, -5.0)
+
+
+func _on_player_hurt(_amount: float, _kb: Vector3) -> void:
+	if _audio != null:
+		_audio.play_sfx("player_hurt")
+
+
+func _on_upgrade_modal_opened(_choices: Array) -> void:
+	if _audio != null:
+		_audio.play_sfx("level_up", 0.02, -2.0)
+
+
+func _on_barrel_exploded(_pos: Vector3, _rad: float) -> void:
+	if _audio != null:
+		_audio.play_sfx("barrel_explode", 0.08, -1.0)
+
+
+func _on_crate_spawned(crate: Node3D) -> void:
+	if crate != null and crate.has_signal("collected"):
+		crate.connect("collected", func(_id: String, _c: Node3D) -> void:
+			if _audio != null:
+				_audio.play_sfx("pickup", 0.05, -2.5)
+		)
 
 
 func _compute_avg_ammo_ratio() -> float:
@@ -165,6 +237,8 @@ func _update_dynamic_water_ripples() -> void:
 
 
 func _on_state_changed(new_state: int) -> void:
+	if _audio != null:
+		_audio.set_paused_ducking(new_state != GameManagerRef.State.PLAYING)
 	_update_mouse_mode(new_state)
 
 

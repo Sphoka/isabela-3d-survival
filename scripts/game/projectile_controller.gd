@@ -148,12 +148,12 @@ func _handle_hit(target: Variant) -> void:
 
 func _detonate_rocket(direct_target: Variant) -> void:
 	_exploded = true
-	if direct_target is Node and (direct_target as Node).is_in_group("enemies") and direct_target.has_method("take_damage"):
+	if direct_target is Node and ((direct_target as Node).is_in_group("enemies") or (direct_target as Node).is_in_group("damageable_props")) and direct_target.has_method("take_damage"):
 		direct_target.call("take_damage", damage, direction * knockback_mps * 0.5, false, "rocket_direct")
 
 	if is_inside_tree():
-		for node in get_tree().get_nodes_in_group("enemies"):
-			if not (node is Node3D):
+		for node in get_tree().get_nodes_in_group("enemies") + get_tree().get_nodes_in_group("damageable_props"):
+			if not (node is Node3D) or not is_instance_valid(node):
 				continue
 			var n3 := node as Node3D
 			var d := global_position.distance_to(n3.global_position + Vector3(0.0, 0.7, 0.0))

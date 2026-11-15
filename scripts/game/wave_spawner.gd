@@ -16,6 +16,7 @@ var _db: BalanceDBRef
 var _entities_root: Node3D
 var _player: Node3D
 var _ship: Node3D
+var _arena_props: Node
 var _rng := RandomNumberGenerator.new()
 
 var _queue: Array[String] = []
@@ -31,11 +32,12 @@ func _ready() -> void:
 	_rng.randomize()
 
 
-func setup(balance_db: BalanceDBRef, entities_root: Node3D, player: Node3D, ship: Node3D = null) -> void:
+func setup(balance_db: BalanceDBRef, entities_root: Node3D, player: Node3D, ship: Node3D = null, arena_props: Node = null) -> void:
 	_db = balance_db
 	_entities_root = entities_root
 	_player = player
 	_ship = ship
+	_arena_props = arena_props
 
 
 func set_rng_seed(seed_val: int) -> void:
@@ -78,11 +80,13 @@ func spawn_ambient_wave_crate() -> void:
 	_prune_dead(_active_crates)
 	if _active_crates.size() >= max_crates:
 		return
-	var angle := _rng.randf_range(0.0, TAU)
-	var radius := _rng.randf_range(6.0, 14.0)
-	var pos := Vector3(cos(angle) * radius, 0.0, sin(angle) * radius)
-	var cid := choose_crate_type(0.55, 0.55)
-	_instantiate_crate(cid, pos)
+	for _attempt in range(12):
+		var angle := _rng.randf_range(0.0, TAU)
+		var radius := _rng.randf_range(6.0, 14.0)
+		var pos := Vector3(cos(angle) * radius, 0.0, sin(angle) * radius)
+		if _is_spot_clear(pos, 1.4):
+			_instantiate_crate(choose_crate_type(0.55, 0.55), pos)
+			return
 
 
 func _process(delta: float) -> void:
@@ -105,11 +109,11 @@ func pick_ring_spawn_position(player_pos: Vector3) -> Vector3:
 	var min_player_d := float(arena.get("min_spawn_distance_from_player_m", 10.0))
 	var clamp_r := float(arena.get("playable_radius_m", 32.0)) - 1.5
 
-	for _attempt in range(24):
+	for _attempt in range(28):
 		var theta := _rng.randf_range(0.0, TAU)
 		var r := _rng.randf_range(r_min, r_max)
 		var candidate := Vector3(cos(theta) * r, 0.0, sin(theta) * r)
-		if candidate.distance_to(Vector3(player_pos.x, 0.0, player_pos.z)) >= min_player_d:
+		if candidate.distance_to(Vector3(player_pos.x, 0.0, player_pos.z)) >= min_player_d and _is_spot_clear(candidate, 1.5):
 			return candidate
 
 	# Fallback opposite player direction on ring
@@ -196,6 +200,12 @@ func _spawn_drop_beam_fx(pos: Vector3) -> void:
 	var tw := beam.create_tween()
 	tw.tween_property(mat, "albedo_color:a", 0.0, 0.55)
 	tw.tween_callback(beam.queue_free)
+
+
+func _is_spot_clear(pos: Vector3, margin_m: float) -> bool:
+	if _arena_props != null and _arena_props.has_method("is_position_clear"):
+		return bool(_arena_props.call("is_position_clear", pos, margin_m))
+	return true
 
 
 func _prune_dead(arr: Array[Node3D]) -> void:

@@ -7,6 +7,7 @@ const ProjectileRef := preload("res://scripts/game/projectile_controller.gd")
 const WeaponVFXRef := preload("res://scripts/game/weapon_vfx.gd")
 
 signal shot_hit(is_crit: bool, is_kill: bool)
+signal shot_executed(weapon_id: String)
 
 @export var projectile_parent_path: NodePath
 
@@ -60,11 +61,8 @@ func refresh_equipped_mesh() -> void:
 		_active_visual.queue_free()
 		_active_visual = null
 		_muzzle_node = null
-
 	var asset_path := str(def.get("asset_path", ""))
 	if asset_path.is_empty() or not ResourceLoader.exists(asset_path):
-		if not asset_path.is_empty():
-			push_warning("WeaponManager: weapon asset not found yet at '%s'" % asset_path)
 		return
 	var ps := load(asset_path) as PackedScene
 	if ps == null:
@@ -83,8 +81,7 @@ func refresh_equipped_mesh() -> void:
 		var blade := _active_visual.find_child("SM_Weapon_Lightsaber_Blade", true, false) as Node3D
 		if blade != null:
 			blade.scale.y = 0.05
-			var tw := blade.create_tween()
-			tw.tween_property(blade, "scale:y", 1.0, 0.16)
+			blade.create_tween().tween_property(blade, "scale:y", 1.0, 0.16)
 
 
 func execute_shot(shot: Dictionary, aim_data: Dictionary) -> void:
@@ -96,6 +93,7 @@ func execute_shot(shot: Dictionary, aim_data: Dictionary) -> void:
 	if base_dir.length_squared() < 0.01:
 		base_dir = aim_data.get("forward", Vector3.FORWARD)
 	var scene_root := get_tree().current_scene if is_inside_tree() else null
+	shot_executed.emit(str(shot.get("id", "pistol")))
 
 	match delivery:
 		"hitscan":
@@ -109,6 +107,7 @@ func execute_shot(shot: Dictionary, aim_data: Dictionary) -> void:
 			WeaponVFXRef.spawn_muzzle_flash(scene_root, muzzle_pos, Color(1.0, 0.65, 0.25))
 		"hitscan_pierce":
 			_fire_piercing_laser(ray_origin, muzzle_pos, apply_spread(base_dir, float(shot.get("spread_deg", 0.15))), shot)
+			WeaponVFXRef.spawn_muzzle_flash(scene_root, muzzle_pos, Color(0.20, 0.95, 1.0))
 		"projectile_explosive":
 			var rocket_origin := ray_origin + base_dir * 0.55
 			_spawn_rocket(rocket_origin, apply_spread(base_dir, float(shot.get("spread_deg", 0.4))), shot)
@@ -168,15 +167,7 @@ func _fire_hitscan_ray(origin: Vector3, beam_start: Vector3, dir: Vector3, shot:
 	var hit := space.intersect_ray(q)
 	if not hit.is_empty():
 		end_pos = hit["position"]
-		var col: Variant = hit.get("collider", null)
-		if col is Node and (col as Node).is_in_group("enemies") and col.has_method("take_damage"):
-			var dist := origin.distance_to(end_pos)
-			var dmg := _apply_distance_falloff(float(shot["final_damage"]), dist, shot)
-			if end_pos.y - (col as Node3D).global_position.y > float(col.get("headshot_y_threshold")) if "headshot_y_threshold" in col else false:
-				dmg *= float(shot.get("headshot_multiplier", 1.0))
-			var will_kill: bool = ("current_hp" in col) and float(col.get("current_hp")) <= dmg
-			col.call("take_damage", dmg, dir * float(shot.get("knockback_mps", 2.0)), bool(shot.get("is_crit", false)), str(shot.get("id", "")))
-			shot_hit.emit(bool(shot.get("is_crit", false)), will_kill)
+		_apply_ray_hit(hit, origin, dir, shot, true)
 	WeaponVFXRef.spawn_beam_fx(get_tree().current_scene, beam_start, end_pos, beam_color, 0.025, 0.08)
 
 
@@ -191,27 +182,36 @@ func _fire_piercing_laser(origin: Vector3, beam_start: Vector3, dir: Vector3, sh
 	var space := get_world_3d().direct_space_state
 	var end_pos := origin + dir * max_r
 	var cur_start := origin
-
 	while pierce_left > 0:
 		var q := PhysicsRayQueryParameters3D.create(cur_start, origin + dir * max_r, 1 | 4)
 		q.exclude = excluded
 		var hit := space.intersect_ray(q)
 		if hit.is_empty():
 			break
-		var hp: Vector3 = hit["position"]
-		var col: Variant = hit.get("collider", null)
-		if col is Node and (col as Node).is_in_group("enemies") and col.has_method("take_damage"):
-			excluded.append((col as CollisionObject3D).get_rid())
-			var will_kill: bool = ("current_hp" in col) and float(col.get("current_hp")) <= float(shot["final_damage"])
-			col.call("take_damage", float(shot["final_damage"]), dir * float(shot.get("knockback_mps", 1.2)), bool(shot.get("is_crit", false)), "laser_gun")
-			shot_hit.emit(bool(shot.get("is_crit", false)), will_kill)
-			end_pos = hp
-			cur_start = hp + dir * 0.05
-			pierce_left -= 1
-		else:
-			end_pos = hp
+		end_pos = hit["position"]
+		if not _apply_ray_hit(hit, origin, dir, shot, false):
 			break
+		excluded.append((hit["collider"] as CollisionObject3D).get_rid())
+		cur_start = end_pos + dir * 0.05
+		pierce_left -= 1
 	WeaponVFXRef.spawn_beam_fx(get_tree().current_scene, beam_start, end_pos, Color(0.15, 0.90, 1.0), 0.06, 0.10)
+
+
+func _apply_ray_hit(hit: Dictionary, origin: Vector3, dir: Vector3, shot: Dictionary, use_falloff: bool) -> bool:
+	var hp: Vector3 = hit["position"]
+	var col: Variant = hit.get("collider", null)
+	var dmg_target := _is_damageable(col)
+	var is_enemy := col is Node and (col as Node).is_in_group("enemies")
+	if dmg_target:
+		var dmg := _apply_distance_falloff(float(shot["final_damage"]), origin.distance_to(hp), shot) if use_falloff else float(shot["final_damage"])
+		if is_enemy and "headshot_y_threshold" in col and (hp.y - (col as Node3D).global_position.y > float(col.get("headshot_y_threshold"))):
+			dmg *= float(shot.get("headshot_multiplier", 1.0))
+		var will_kill: bool = is_enemy and ("current_hp" in col) and float(col.get("current_hp")) <= dmg
+		col.call("take_damage", dmg, dir * float(shot.get("knockback_mps", 2.0)), bool(shot.get("is_crit", false)), str(shot.get("id", "")))
+		if is_enemy:
+			shot_hit.emit(bool(shot.get("is_crit", false)), will_kill)
+	WeaponVFXRef.spawn_hit_sparks(get_tree().current_scene, hp, hit.get("normal", Vector3.UP), bool(shot.get("is_crit", false)) and is_enemy, dmg_target)
+	return is_enemy
 
 
 func _spawn_rocket(origin: Vector3, dir: Vector3, shot: Dictionary) -> void:
@@ -245,7 +245,14 @@ func _execute_melee_cone(shot: Dictionary, forward: Vector3) -> void:
 			var will_kill: bool = ("current_hp" in en) and float(en.get("current_hp")) <= float(shot["final_damage"]) * armor_mult
 			en.call("take_damage", float(shot["final_damage"]), push, bool(shot.get("is_crit", false)), str(shot.get("id", "")), armor_mult)
 			shot_hit.emit(bool(shot.get("is_crit", false)), will_kill)
+			WeaponVFXRef.spawn_hit_sparks(get_tree().current_scene, en.global_position + Vector3(0.0, 0.8, 0.0), -forward, bool(shot.get("is_crit", false)), true)
 			hits += 1
+	for prop in get_tree().get_nodes_in_group("damageable_props"):
+		if prop is Node3D and is_instance_valid(prop) and is_point_in_melee_cone(_owner_player.global_position, forward, (prop as Node3D).global_position, range_m, arc_deg) and prop.has_method("take_damage"):
+			prop.call("take_damage", float(shot["final_damage"]), forward * 4.0, false, str(shot.get("id", "")))
+
+func _is_damageable(col: Variant) -> bool:
+	return col is Node and col.has_method("take_damage") and ((col as Node).is_in_group("enemies") or (col as Node).is_in_group("damageable_props"))
 
 
 func _apply_distance_falloff(dmg: float, dist: float, shot: Dictionary) -> float:
@@ -278,11 +285,8 @@ func _get_muzzle_world_position(_shot: Dictionary) -> Vector3:
 
 
 func _apply_tps_weapon_shadow_mode() -> void:
-	if _active_visual == null:
-		return
-	var mode := GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if _is_fps_mode else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	_set_shadow_recursive(_active_visual, mode)
-
+	if _active_visual != null:
+		_set_shadow_recursive(_active_visual, GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if _is_fps_mode else GeometryInstance3D.SHADOW_CASTING_SETTING_ON)
 
 func _set_shadow_recursive(node: Node, mode: GeometryInstance3D.ShadowCastingSetting) -> void:
 	if node is MeshInstance3D:

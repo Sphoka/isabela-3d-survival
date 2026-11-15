@@ -27,6 +27,8 @@ static func process_combat(player: CharacterBody3D, delta: float, loadout: Weapo
 	var wid := str(def.get("id", "pistol"))
 	var vm = cam_rig.get_fps_viewmodel() if cam_rig != null else null
 	if Input.is_action_just_pressed("reload") and loadout.start_reload_or_vent():
+		if player.is_inside_tree():
+			player.get_tree().call_group("audio_manager", "play_sfx", "reload")
 		if animator != null:
 			animator.trigger_reload(wid)
 		if vm != null:

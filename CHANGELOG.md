@@ -145,3 +145,21 @@
   - **Trava `< 300` linhas**: verifica cada arquivo em `scripts/game/*.gd` via `wc -l`, emitindo erro `::error file=...::` se atingir `>= 300` linhas.
   - **Godot `4.7.2-stable` Linux headless + cache**: faz cache do binário `Godot_v4.7.2-stable_linux.x86_64` em `~/.cache/godot/4.7.2-stable` e de `.godot/imported`, executa `--headless --path . --import` (`timeout 180s`) e roda sequencialmente todas as suítes `tests/test_*.gd` (`timeout 120s` por suíte).
 
+## [2026-11-15 18:45] Trilha A — Mood Sci-Fi Crepúsculo, Desmontagem Física, Props & Áudio Punk-Rock
+- **Backups criados**: `D:\Godot\isabela_scene_test\.backups\*.20261115_181033.bak` (`arena_coordinator.gd`, `CHANGELOG.md`, `enemy_droid.gd`, `playable_arena.tscn`, `player_combat_helper.gd`, `player_controller.gd`, `projectile_controller.gd`, `wave_spawner.gd`, `weapon_manager.gd`, `weapon_vfx.gd`).
+- **Mood Sci-Fi & Cenário**:
+  - [`scenes/game/playable_arena.tscn`](file:///D:/Godot/isabela_scene_test/scenes/game/playable_arena.tscn): ajustado `ProceduralSkyMaterial_1`, `Environment_1` (`glow_intensity = 0.72`, `fog_light_color` azul-petróleo) e `DirectionalLight3D` para estética **Sci-Fi Crepúsculo / Neon Industrial**.
+  - Adicionado [`scripts/game/arena_props.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/arena_props.gd): 4 barreiras baixas e 5 blocos/estruturas táticas (`StaticBody3D`, layer `1`), 4 torres de comunicação neon (`OmniLight3D`), capacetes `SM_Helmet_A`/`SM_Helmet_B` como detalhes de destroços e 6 barris explosivos táticos, preservando raio livre `>= 4 m` no spawn.
+  - Adicionado [`scripts/game/explosive_barrel.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/explosive_barrel.gd): células/barris de plasma destrutíveis com AoE (`6.0 m`), reação em cadeia (`5.5 m`) e respawn periódico.
+  - [`scripts/game/wave_spawner.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/wave_spawner.gd): atualizado `setup(...)` e seleção de spawn/caixas para respeitar `ArenaProps.is_position_clear()`.
+- **Destruição dos Robôs & VFX (Opções 3 e 4)**:
+  - Adicionado [`scripts/game/droid_destruction_vfx.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/droid_destruction_vfx.gd): explosão aditiva + onda de faíscas + marca temporária de queimadura + `6–8` peças físicas `RigidBody3D` (`droid_debris`) quicando no piso com teto global de `36` peças e fade-out.
+  - [`scripts/game/enemy_droid.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/enemy_droid.gd): ativado overlay real de hit-flash em dano/crítico e chamada a `DroidDestructionVFX` antes de `queue_free()`.
+  - [`scripts/game/weapon_vfx.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/weapon_vfx.gd): adicionado `spawn_hit_sparks()`, muzzle flash emissivo 3D e rastro duplo + faíscas para Katana e Sabre de Luz.
+  - [`scripts/game/weapon_manager.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/weapon_manager.gd) & [`scripts/game/projectile_controller.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/projectile_controller.gd): suporte a `damageable_props` (barris), unificação em `_apply_ray_hit`, sinal `shot_executed` e faíscas de impacto.
+- **Áudio Híbrido Punk-Rock + SFX**:
+  - Adicionados [`scripts/game/audio_manager.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/audio_manager.gd), [`scripts/game/procedural_sfx.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/procedural_sfx.gd) e `assets/audio/music/punk_rock_loop.ogg` + `15` efeitos `.ogg` em `assets/audio/sfx/`, com fallback procedural em `AudioStreamWAV`, buses `Music`/`SFX` e ducking de pausa.
+  - [`scripts/game/arena_coordinator.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/arena_coordinator.gd) & [`scripts/game/player_combat_helper.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/player_combat_helper.gd): ligados todos os eventos sonoros de tiro, corte, recarga, acerto, explosões, coleta, level-up, onda e pausa.
+- **Testes**:
+  - Adicionada suíte [`tests/test_trilha_a_audio_and_destruction.gd`](file:///D:/Godot/isabela_scene_test/tests/test_trilha_a_audio_and_destruction.gd); todas as **10 suítes headless** passaram (`TOTAL_FAILED=0`) e todos os `scripts/game/*.gd` estão `< 300` linhas (máximo `299` em `player_animator.gd`, `295` em `weapon_manager.gd`).
+

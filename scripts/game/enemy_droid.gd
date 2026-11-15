@@ -4,6 +4,7 @@ extends CharacterBody3D
 
 const BalanceDBRef := preload("res://scripts/game/balance_db.gd")
 const ProjectileRef := preload("res://scripts/game/projectile_controller.gd")
+const DestructionVFXRef := preload("res://scripts/game/droid_destruction_vfx.gd")
 
 signal died(enemy: Node3D, enemy_id: String, xp_reward: int, score_reward: int, drop_chance: float, world_pos: Vector3)
 signal took_damage(amount: float, is_crit: bool)
@@ -32,6 +33,8 @@ var _flash_left: float = 0.0
 var _hp_bar_fill: MeshInstance3D
 var _foot_l: Node3D
 var _foot_r: Node3D
+var _meshes: Array[MeshInstance3D] = []
+var _flash_mat: StandardMaterial3D
 
 
 func _ready() -> void:
@@ -41,6 +44,7 @@ func _ready() -> void:
 	_ensure_collision_and_bar()
 	_foot_l = find_child("Target_Foot_L", true, false) as Node3D
 	_foot_r = find_child("Target_Foot_R", true, false) as Node3D
+	_collect_body_meshes()
 
 
 func configure_from_balance(id: String, db: BalanceDBRef, wave_spec: Dictionary, player: Node3D, proj_parent: Node3D = null) -> void:
@@ -78,11 +82,16 @@ func take_damage(amount: float, impulse: Vector3 = Vector3.ZERO, is_crit: bool =
 	var final_dmg := amount * (tall_armor_pierce if enemy_id == "droid_tall" else 1.0)
 	current_hp = maxf(0.0, current_hp - final_dmg)
 	_knockback_vel += Vector3(impulse.x, 0.0, impulse.z) * (1.0 - knockback_resistance)
-	_flash_left = 0.10
+	_flash_left = 0.11
+	_set_hit_flash(true, is_crit)
 	_update_hp_bar()
 	took_damage.emit(final_dmg, is_crit)
 	if current_hp <= 0.0:
 		_dead = true
+		var fx_parent: Node = get_tree().current_scene if is_inside_tree() else get_parent()
+		if fx_parent == null:
+			fx_parent = get_parent()
+		DestructionVFXRef.spawn_droid_explosion(fx_parent, global_position if is_inside_tree() else position, enemy_id, impulse)
 		died.emit(self, enemy_id, xp_reward, score_reward, crate_drop_chance, global_position)
 		queue_free()
 
@@ -91,7 +100,10 @@ func _physics_process(delta: float) -> void:
 	if _dead:
 		return
 	_cooldown_left = maxf(0.0, _cooldown_left - delta)
-	_flash_left = maxf(0.0, _flash_left - delta)
+	if _flash_left > 0.0:
+		_flash_left = maxf(0.0, _flash_left - delta)
+		if _flash_left <= 0.0:
+			_set_hit_flash(false, false)
 	_knockback_vel = _knockback_vel.move_toward(Vector3.ZERO, 26.0 * delta)
 
 	if not is_on_floor():
@@ -214,3 +226,23 @@ func _ensure_collision_and_bar() -> void:
 func _update_hp_bar() -> void:
 	if _hp_bar_fill != null:
 		_hp_bar_fill.scale.x = clampf(current_hp / maxf(1.0, max_hp), 0.0, 1.0)
+
+
+func _collect_body_meshes() -> void:
+	_meshes.clear()
+	for node in find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi != null and mi != _hp_bar_fill:
+			_meshes.append(mi)
+	_flash_mat = StandardMaterial3D.new()
+	_flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_flash_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_flash_mat.albedo_color = Color(1.0, 0.72, 0.35, 0.65)
+
+
+func _set_hit_flash(active: bool, is_crit: bool) -> void:
+	if _flash_mat != null and active:
+		_flash_mat.albedo_color = Color(0.35, 0.98, 1.0, 0.72) if is_crit else Color(1.0, 0.72, 0.32, 0.65)
+	for mi in _meshes:
+		if is_instance_valid(mi):
+			mi.material_overlay = _flash_mat if active else null
