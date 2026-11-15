@@ -23,7 +23,7 @@ var _bootstrapped: bool = false
 
 
 func _ready() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS
+	process_mode = Node.PROCESS_MODE_PAUSABLE
 	InputSetupRef.ensure_default_actions()
 	if not _bootstrapped and get_node_or_null("GameManager") != null:
 		_bootstrapped = true

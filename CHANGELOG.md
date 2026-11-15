@@ -124,3 +124,15 @@
   - `README.md`: documentação para colaboradores com visão geral do jogo, tabela do arsenal (7 armas), requisitos passo-a-passo (Git + Git LFS, Godot `4.7.2-stable`, Blender `5.2+` opcional, `Assets2Godot v0.8.2`), controles completos (Teclado/Mouse e Gamepad), comandos para as 9 suítes de testes headless e regras de contribuição.
   - `GEMINI.md`: guia de contexto técnico para agentes de IA com arquitetura modular dos 22 scripts em `scripts/game/`, invariantes (`< 300` linhas/script, proteção de `SK_Isabela.glb` e `main_isabela_scene.tscn`), armadilhas resolvidas (`WeaponSocket`, `SceneTree.quit`, facing `+Z`/`-Z`) e protocolo obrigatório de verificação.
 - **Publicação Git / GitHub**: repositório `floodnet666/isabela-3d-survival` inicializado em `main` com Git LFS para `*.blend` e enviado ao GitHub (`public`).
+
+## [2026-11-15 17:49] Correção de Pausa (Esc) — Congelamento de Inimigos, Projéteis e Spawner
+- **Backups criados**: `D:\Godot\isabela_scene_test\.backups\arena_coordinator.gd.20261115_*.bak`, `test_hud_and_arena_loop.gd.20261115_*.bak`, `CHANGELOG.md.20261115_*.bak`.
+- **`scripts/game/arena_coordinator.gd` (linha 26)**:
+  - **Removido**: `process_mode = Node.PROCESS_MODE_ALWAYS`
+  - **Adicionado**: `process_mode = Node.PROCESS_MODE_PAUSABLE`
+  - **Motivo**: como `PlayableArena` é o nó raiz da cena, `PROCESS_MODE_ALWAYS` fazia todos os filhos com `INHERIT` (`Entities`, `EnemyDroid`, `WaveSpawner`, `ProjectileController`, `PickupCrate`, `Player`, `SM_Ship`) continuarem processando e atacando mesmo com `get_tree().paused = true`. `HUD` (`hud_controller.gd`) e `UpgradeModalUI` (`upgrade_modal_ui.gd`) já definem `PROCESS_MODE_ALWAYS` explicitamente e continuam recebendo `Esc`/`Start` e cliques normalmente.
+- **`tests/test_hud_and_arena_loop.gd`**:
+  - Adicionado teste de regressão `_test_pause_freezes_enemies_and_spawner()` simulando `pause` (`Esc`) com inimigo a `1,0 m` do jogador durante 35 frames de física (verificando zero dano/movimento em pausa, `HUD` processável e retomada limpa no segundo `Esc`).
+- **Verificação**:
+  - Todas as **9 suítes headless** passaram com `EXIT=0` (`ALL_9_TESTS_PASSED`).
+  - `scripts/game/*.gd` mantidos abaixo de 300 linhas (`arena_coordinator.gd` com 203 linhas).
