@@ -1,0 +1,21 @@
+# Normalize line endings for Godot text resources, scripts, data, and docs
+* text=auto eol=lf
+*.gd text eol=lf
+*.gdshader text eol=lf
+*.tscn text eol=lf
+*.tres text eol=lf
+*.godot text eol=lf
+*.cfg text eol=lf
+*.import text eol=lf
+*.uid text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+# Git LFS for heavy Blender source files (>100 MB on fase6_validation_scene.blend)
+*.blend filter=lfs diff=lfs merge=lfs -text
+# Mark game binary assets cleanly
+*.glb binary
+*.png binary
+*.jpg binary
+*.jpeg binary

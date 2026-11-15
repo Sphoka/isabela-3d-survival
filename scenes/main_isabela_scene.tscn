@@ -1,0 +1,203 @@
+[gd_scene load_steps=15 format=3]
+
+[ext_resource type="Script" path="res://scripts/main_scene_pose.gd" id="1_pose_script"]
+[ext_resource type="PackedScene" uid="uid://bhvtrcn8df0cy" path="res://assets/SK_Isabela/SK_Isabela.glb" id="2_isabela"]
+[ext_resource type="PackedScene" uid="uid://sq2uyypig7rk" path="res://assets/SM_Helmet_A/SM_Helmet_A.glb" id="3_helmet_a"]
+[ext_resource type="PackedScene" uid="uid://cb28ia4plsr36" path="res://assets/SM_Helmet_B/SM_Helmet_B.glb" id="4_helmet_b"]
+[ext_resource type="PackedScene" uid="uid://d1pejauww2to1" path="res://assets/SK_Droid_Small/SK_Droid_Small.glb" id="5_droid_small"]
+[ext_resource type="PackedScene" uid="uid://vmhhgc5yh1fh" path="res://assets/SK_Droid_Tall/SK_Droid_Tall.glb" id="6_droid_tall"]
+[ext_resource type="PackedScene" uid="uid://rnv1ue2530lh" path="res://assets/SM_Ship/SM_Ship.glb" id="7_ship"]
+[ext_resource type="PackedScene" uid="uid://chu5j8np73ehh" path="res://assets/ENV_DesertCoast/SM_DesertDunes.glb" id="8_dunes"]
+[ext_resource type="PackedScene" uid="uid://bo6lsym45duor" path="res://assets/ENV_DesertCoast/SM_ShoreRocks.glb" id="9_rocks"]
+[ext_resource type="Material" path="res://shaders/M_ShallowMirrorWater.tres" id="10_water_mat"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.24, 0.34, 0.48, 1)
+sky_horizon_color = Color(0.95, 0.68, 0.42, 1)
+sky_curve = 0.12
+ground_bottom_color = Color(0.18, 0.14, 0.1, 1)
+ground_horizon_color = Color(0.85, 0.58, 0.36, 1)
+ground_curve = 0.03
+sun_angle_max = 18.0
+sun_curve = 0.1
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 3
+ambient_light_sky_contribution = 0.7
+tonemap_mode = 4
+ssr_enabled = true
+ssr_max_steps = 64
+ssr_fade_in = 0.15
+ssr_fade_out = 2.0
+ssr_depth_tolerance = 0.25
+glow_enabled = true
+glow_intensity = 0.45
+glow_bloom = 0.15
+fog_enabled = true
+fog_light_color = Color(0.88, 0.66, 0.46, 1)
+fog_sun_scatter = 0.45
+fog_density = 0.0045
+fog_sky_affect = 0.65
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_water"]
+size = Vector2(300, 300)
+subdivide_width = 64
+subdivide_depth = 64
+
+[node name="MainIsabelaScene" type="Node3D"]
+script = ExtResource("1_pose_script")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.766044, -0.133022, 0.628881, 0, 0.978148, 0.207912, -0.642788, 0.15855, -0.749304, -18, 8, -22)
+light_color = Color(1, 0.780392, 0.501961, 1)
+light_energy = 3.5
+shadow_enabled = true
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.99023, -0.13945, 0, 0.13945, 0.99023, 0, 0.52, 3.55)
+keep_aspect = 0
+fov = 73.7
+far = 500.0
+
+[node name="WaterPlane" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -40)
+mesh = SubResource("PlaneMesh_water")
+surface_material_override/0 = ExtResource("10_water_mat")
+
+[node name="SM_DesertDunes" parent="." instance=ExtResource("8_dunes")]
+
+[node name="SM_ShoreRocks" parent="." instance=ExtResource("9_rocks")]
+
+[node name="SM_Ship" parent="." instance=ExtResource("7_ship")]
+transform = Transform3D(0.962819, 0.159148, 0.218293, -0.138471, 0.984863, -0.104528, -0.231926, 0.070672, 0.970163, -2, 21.5, -72)
+
+[node name="SK_Isabela" parent="." instance=ExtResource("2_isabela")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.02, 0)
+
+[node name="SpringBoneSimulator3D" type="SpringBoneSimulator3D" parent="SK_Isabela/Armature_Isabela/Skeleton3D"]
+setting_count = 7
+settings/0/root_bone_name = "Hair_Front_L_01"
+settings/0/end_bone_name = "Hair_Front_L_04"
+settings/0/stiffness/value = 0.55
+settings/0/drag/value = 0.35
+settings/0/gravity/value = 0.25
+settings/0/gravity/direction = Vector3(0, -1, 0)
+settings/0/enable_all_child_collisions = true
+settings/1/root_bone_name = "Hair_Front_R_01"
+settings/1/end_bone_name = "Hair_Front_R_04"
+settings/1/stiffness/value = 0.55
+settings/1/drag/value = 0.35
+settings/1/gravity/value = 0.25
+settings/1/gravity/direction = Vector3(0, -1, 0)
+settings/1/enable_all_child_collisions = true
+settings/2/root_bone_name = "Hair_Side_L_01"
+settings/2/end_bone_name = "Hair_Side_L_04"
+settings/2/stiffness/value = 0.45
+settings/2/drag/value = 0.35
+settings/2/gravity/value = 0.25
+settings/2/gravity/direction = Vector3(0, -1, 0)
+settings/2/enable_all_child_collisions = true
+settings/3/root_bone_name = "Hair_Side_R_01"
+settings/3/end_bone_name = "Hair_Side_R_04"
+settings/3/stiffness/value = 0.45
+settings/3/drag/value = 0.35
+settings/3/gravity/value = 0.25
+settings/3/gravity/direction = Vector3(0, -1, 0)
+settings/3/enable_all_child_collisions = true
+settings/4/root_bone_name = "Hair_Back_L_01"
+settings/4/end_bone_name = "Hair_Back_L_04"
+settings/4/stiffness/value = 0.45
+settings/4/drag/value = 0.35
+settings/4/gravity/value = 0.25
+settings/4/gravity/direction = Vector3(0, -1, 0)
+settings/4/enable_all_child_collisions = true
+settings/5/root_bone_name = "Hair_Back_C_01"
+settings/5/end_bone_name = "Hair_Back_C_04"
+settings/5/stiffness/value = 0.45
+settings/5/drag/value = 0.35
+settings/5/gravity/value = 0.25
+settings/5/gravity/direction = Vector3(0, -1, 0)
+settings/5/enable_all_child_collisions = true
+settings/6/root_bone_name = "Hair_Back_R_01"
+settings/6/end_bone_name = "Hair_Back_R_04"
+settings/6/stiffness/value = 0.45
+settings/6/drag/value = 0.35
+settings/6/gravity/value = 0.25
+settings/6/gravity/direction = Vector3(0, -1, 0)
+settings/6/enable_all_child_collisions = true
+
+[node name="Col_Head" type="SpringBoneCollisionSphere3D" parent="SK_Isabela/Armature_Isabela/Skeleton3D/SpringBoneSimulator3D"]
+bone_name = "Head"
+radius = 0.095
+
+[node name="Col_Neck" type="SpringBoneCollisionSphere3D" parent="SK_Isabela/Armature_Isabela/Skeleton3D/SpringBoneSimulator3D"]
+bone_name = "Neck"
+radius = 0.055
+
+[node name="Col_UpperChest" type="SpringBoneCollisionSphere3D" parent="SK_Isabela/Armature_Isabela/Skeleton3D/SpringBoneSimulator3D"]
+bone_name = "UpperChest"
+radius = 0.14
+
+[node name="RightHandAttach" type="BoneAttachment3D" parent="SK_Isabela/Armature_Isabela/Skeleton3D"]
+bone_name = "RightHand"
+
+[node name="SM_Helmet_A" parent="SK_Isabela/Armature_Isabela/Skeleton3D/RightHandAttach" instance=ExtResource("3_helmet_a")]
+transform = Transform3D(0.951057, 0, -0.309017, 0, 1, 0, 0.309017, 0, 0.951057, 0, -0.28, 0)
+
+[node name="LeftHandAttach" type="BoneAttachment3D" parent="SK_Isabela/Armature_Isabela/Skeleton3D"]
+bone_name = "LeftHand"
+
+[node name="SM_Helmet_B" parent="SK_Isabela/Armature_Isabela/Skeleton3D/LeftHandAttach" instance=ExtResource("4_helmet_b")]
+transform = Transform3D(0.961262, 0, 0.275637, 0, 1, 0, -0.275637, 0, 0.961262, 0, -0.28, 0)
+
+[node name="SK_Droid_Small" parent="." instance=ExtResource("5_droid_small")]
+transform = Transform3D(0.984808, 0, 0.173648, 0, 1, 0, -0.173648, 0, 0.984808, -1.55, -0.04, -2.4)
+
+[node name="TwoBoneIK3D" type="TwoBoneIK3D" parent="SK_Droid_Small/Armature_Droid_Small/Skeleton3D"]
+setting_count = 2
+settings/0/target_node = NodePath("../Target_Foot_L")
+settings/0/root_bone_name = "thigh.L"
+settings/0/middle_bone_name = "shin.L"
+settings/0/end_bone_name = "foot.L"
+settings/1/target_node = NodePath("../Target_Foot_R")
+settings/1/root_bone_name = "thigh.R"
+settings/1/middle_bone_name = "shin.R"
+settings/1/end_bone_name = "foot.R"
+
+[node name="Target_Foot_L" type="Marker3D" parent="SK_Droid_Small/Armature_Droid_Small/Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14, 0.04, 0)
+
+[node name="Target_Foot_R" type="Marker3D" parent="SK_Droid_Small/Armature_Droid_Small/Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 0.04, 0)
+
+[node name="SK_Droid_Tall" parent="." instance=ExtResource("6_droid_tall")]
+transform = Transform3D(0.978148, 0, -0.207912, 0, 1, 0, 0.207912, 0, 0.978148, 1.75, -0.04, -2.85)
+
+[node name="TwoBoneIK3D" type="TwoBoneIK3D" parent="SK_Droid_Tall/Armature_Droid_Tall/Skeleton3D"]
+setting_count = 2
+settings/0/target_node = NodePath("../Target_Foot_L")
+settings/0/root_bone_name = "thigh.L"
+settings/0/middle_bone_name = "shin.L"
+settings/0/end_bone_name = "foot.L"
+settings/1/target_node = NodePath("../Target_Foot_R")
+settings/1/root_bone_name = "thigh.R"
+settings/1/middle_bone_name = "shin.R"
+settings/1/end_bone_name = "foot.R"
+
+[node name="Target_Foot_L" type="Marker3D" parent="SK_Droid_Tall/Armature_Droid_Tall/Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.16, 0.04, 0)
+
+[node name="Target_Foot_R" type="Marker3D" parent="SK_Droid_Tall/Armature_Droid_Tall/Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16, 0.04, 0)
+
+[editable path="SK_Isabela"]
+[editable path="SK_Droid_Small"]
+[editable path="SK_Droid_Tall"]

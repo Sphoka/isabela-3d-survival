@@ -1,0 +1,291 @@
+class_name WeaponManager
+extends Node3D
+## Mounts active 3D weapon mesh into RightHand WeaponSocket and executes hitscan, pellet, rocket, laser, and melee attacks.
+
+const WeaponLoadoutRef := preload("res://scripts/game/weapon_loadout.gd")
+const ProjectileRef := preload("res://scripts/game/projectile_controller.gd")
+const WeaponVFXRef := preload("res://scripts/game/weapon_vfx.gd")
+
+signal shot_hit(is_crit: bool, is_kill: bool)
+
+@export var projectile_parent_path: NodePath
+
+var _loadout: WeaponLoadoutRef
+var _owner_player: Node3D
+var _weapon_socket: Node3D
+var _active_visual: Node3D
+var _muzzle_node: Node3D
+var _projectiles_parent: Node3D
+var _fps_viewmodel: Node3D
+var _is_fps_mode: bool = false
+var _rng := RandomNumberGenerator.new()
+
+
+func _ready() -> void:
+	_rng.randomize()
+	if not projectile_parent_path.is_empty():
+		_projectiles_parent = get_node_or_null(projectile_parent_path) as Node3D
+
+
+func setup(loadout: WeaponLoadoutRef, owner_player: Node3D, proj_parent: Node3D = null) -> void:
+	_loadout = loadout
+	_owner_player = owner_player
+	if proj_parent != null:
+		_projectiles_parent = proj_parent
+	refresh_equipped_mesh()
+
+
+func set_weapon_socket(socket: Node3D) -> void:
+	_weapon_socket = socket
+	refresh_equipped_mesh()
+
+
+func set_fps_context(fps_mode: bool, viewmodel: Node3D) -> void:
+	_is_fps_mode = fps_mode
+	_fps_viewmodel = viewmodel
+	_apply_tps_weapon_shadow_mode()
+	if _fps_viewmodel != null and _loadout != null and _fps_viewmodel.has_method("set_weapon"):
+		_fps_viewmodel.call("set_weapon", _loadout.get_selected_def())
+
+
+func refresh_equipped_mesh() -> void:
+	if _loadout == null:
+		return
+	var def := _loadout.get_selected_def()
+	if _fps_viewmodel != null and _fps_viewmodel.has_method("set_weapon"):
+		_fps_viewmodel.call("set_weapon", def)
+	if _weapon_socket == null:
+		return
+	if _active_visual != null:
+		_active_visual.queue_free()
+		_active_visual = null
+		_muzzle_node = null
+
+	var asset_path := str(def.get("asset_path", ""))
+	if asset_path.is_empty() or not ResourceLoader.exists(asset_path):
+		if not asset_path.is_empty():
+			push_warning("WeaponManager: weapon asset not found yet at '%s'" % asset_path)
+		return
+	var ps := load(asset_path) as PackedScene
+	if ps == null:
+		return
+	_active_visual = ps.instantiate() as Node3D
+	_weapon_socket.add_child(_active_visual)
+	var gpos: Array = def.get("tps_grip_pos", [0.0, 0.0, 0.0])
+	var grot: Array = def.get("tps_grip_rot_deg", [0.0, 0.0, 0.0])
+	if gpos.size() >= 3:
+		_active_visual.position = Vector3(float(gpos[0]), float(gpos[1]), float(gpos[2]))
+	if grot.size() >= 3:
+		_active_visual.rotation_degrees = Vector3(float(grot[0]), float(grot[1]), float(grot[2]))
+	_apply_tps_weapon_shadow_mode()
+	_muzzle_node = _active_visual.get_node_or_null("Muzzle") as Node3D
+	if str(def.get("id", "")) == "lightsaber":
+		var blade := _active_visual.find_child("SM_Weapon_Lightsaber_Blade", true, false) as Node3D
+		if blade != null:
+			blade.scale.y = 0.05
+			var tw := blade.create_tween()
+			tw.tween_property(blade, "scale:y", 1.0, 0.16)
+
+
+func execute_shot(shot: Dictionary, aim_data: Dictionary) -> void:
+	var delivery := str(shot.get("delivery", "hitscan"))
+	var muzzle_pos := _get_muzzle_world_position(shot)
+	var ray_origin := _get_combat_ray_origin(muzzle_pos, aim_data)
+	var target: Vector3 = aim_data.get("target", ray_origin + Vector3.FORWARD * 30.0)
+	var base_dir := (target - ray_origin).normalized()
+	if base_dir.length_squared() < 0.01:
+		base_dir = aim_data.get("forward", Vector3.FORWARD)
+	var scene_root := get_tree().current_scene if is_inside_tree() else null
+
+	match delivery:
+		"hitscan":
+			_fire_hitscan_ray(ray_origin, muzzle_pos, apply_spread(base_dir, float(shot.get("spread_deg", 0.0))), shot, Color(1.0, 0.85, 0.35))
+			WeaponVFXRef.spawn_muzzle_flash(scene_root, muzzle_pos, Color(1.0, 0.85, 0.35))
+		"hitscan_pellets":
+			var pellets := int(shot.get("pellets", 8))
+			var spread := float(shot.get("spread_deg", 6.8))
+			for _i in range(pellets):
+				_fire_hitscan_ray(ray_origin, muzzle_pos, apply_spread(base_dir, spread), shot, Color(1.0, 0.65, 0.25))
+			WeaponVFXRef.spawn_muzzle_flash(scene_root, muzzle_pos, Color(1.0, 0.65, 0.25))
+		"hitscan_pierce":
+			_fire_piercing_laser(ray_origin, muzzle_pos, apply_spread(base_dir, float(shot.get("spread_deg", 0.15))), shot)
+		"projectile_explosive":
+			var rocket_origin := ray_origin + base_dir * 0.55
+			_spawn_rocket(rocket_origin, apply_spread(base_dir, float(shot.get("spread_deg", 0.4))), shot)
+			WeaponVFXRef.spawn_muzzle_flash(scene_root, muzzle_pos, Color(1.0, 0.5, 0.15))
+		"melee_cone":
+			_execute_melee_cone(shot, aim_data.get("forward", Vector3.FORWARD))
+
+
+func apply_spread(dir: Vector3, spread_deg: float) -> Vector3:
+	if spread_deg <= 0.0001:
+		return dir.normalized()
+	var rad := deg_to_rad(spread_deg)
+	var yaw := _rng.randf_range(-rad, rad)
+	var pitch := _rng.randf_range(-rad, rad)
+	var right := dir.cross(Vector3.UP).normalized()
+	if right.length_squared() < 0.01:
+		right = Vector3.RIGHT
+	var up := right.cross(dir).normalized()
+	return (dir + right * tan(yaw) + up * tan(pitch)).normalized()
+
+
+func is_point_in_melee_cone(origin: Vector3, forward: Vector3, point: Vector3, range_m: float, arc_deg: float) -> bool:
+	var flat_to := Vector3(point.x - origin.x, 0.0, point.z - origin.z)
+	if flat_to.length() > range_m:
+		return false
+	if flat_to.length_squared() < 0.001:
+		return true
+	var flat_fwd := Vector3(forward.x, 0.0, forward.z).normalized()
+	var cos_half := cos(deg_to_rad(arc_deg * 0.5))
+	return flat_fwd.dot(flat_to.normalized()) >= cos_half
+
+
+func deflect_projectiles_in_cone(projectiles: Array, origin: Vector3, forward: Vector3, range_m: float, arc_deg: float, dmg_mult: float) -> int:
+	var count := 0
+	for p in projectiles:
+		if not is_instance_valid(p) or not (p is ProjectileRef):
+			continue
+		var pr := p as ProjectileRef
+		if pr.is_friendly_to_player():
+			continue
+		var pos := pr.global_position if pr.is_inside_tree() else pr.position
+		if is_point_in_melee_cone(origin, forward, pos, range_m + 0.5, arc_deg):
+			pr.deflect(forward, dmg_mult)
+			count += 1
+	return count
+
+
+func _fire_hitscan_ray(origin: Vector3, beam_start: Vector3, dir: Vector3, shot: Dictionary, beam_color: Color) -> void:
+	if not is_inside_tree():
+		return
+	var max_r := float(shot.get("range_m", 55.0))
+	var end_pos := origin + dir * max_r
+	var space := get_world_3d().direct_space_state
+	var q := PhysicsRayQueryParameters3D.create(origin, end_pos, 1 | 4)
+	if _owner_player != null:
+		q.exclude = [_owner_player.get_rid()]
+	var hit := space.intersect_ray(q)
+	if not hit.is_empty():
+		end_pos = hit["position"]
+		var col: Variant = hit.get("collider", null)
+		if col is Node and (col as Node).is_in_group("enemies") and col.has_method("take_damage"):
+			var dist := origin.distance_to(end_pos)
+			var dmg := _apply_distance_falloff(float(shot["final_damage"]), dist, shot)
+			if end_pos.y - (col as Node3D).global_position.y > float(col.get("headshot_y_threshold")) if "headshot_y_threshold" in col else false:
+				dmg *= float(shot.get("headshot_multiplier", 1.0))
+			var will_kill: bool = ("current_hp" in col) and float(col.get("current_hp")) <= dmg
+			col.call("take_damage", dmg, dir * float(shot.get("knockback_mps", 2.0)), bool(shot.get("is_crit", false)), str(shot.get("id", "")))
+			shot_hit.emit(bool(shot.get("is_crit", false)), will_kill)
+	WeaponVFXRef.spawn_beam_fx(get_tree().current_scene, beam_start, end_pos, beam_color, 0.025, 0.08)
+
+
+func _fire_piercing_laser(origin: Vector3, beam_start: Vector3, dir: Vector3, shot: Dictionary) -> void:
+	if not is_inside_tree():
+		return
+	var max_r := float(shot.get("range_m", 60.0))
+	var pierce_left := int(shot.get("pierce_count", 3)) + 1
+	var excluded: Array[RID] = []
+	if _owner_player != null:
+		excluded.append(_owner_player.get_rid())
+	var space := get_world_3d().direct_space_state
+	var end_pos := origin + dir * max_r
+	var cur_start := origin
+
+	while pierce_left > 0:
+		var q := PhysicsRayQueryParameters3D.create(cur_start, origin + dir * max_r, 1 | 4)
+		q.exclude = excluded
+		var hit := space.intersect_ray(q)
+		if hit.is_empty():
+			break
+		var hp: Vector3 = hit["position"]
+		var col: Variant = hit.get("collider", null)
+		if col is Node and (col as Node).is_in_group("enemies") and col.has_method("take_damage"):
+			excluded.append((col as CollisionObject3D).get_rid())
+			var will_kill: bool = ("current_hp" in col) and float(col.get("current_hp")) <= float(shot["final_damage"])
+			col.call("take_damage", float(shot["final_damage"]), dir * float(shot.get("knockback_mps", 1.2)), bool(shot.get("is_crit", false)), "laser_gun")
+			shot_hit.emit(bool(shot.get("is_crit", false)), will_kill)
+			end_pos = hp
+			cur_start = hp + dir * 0.05
+			pierce_left -= 1
+		else:
+			end_pos = hp
+			break
+	WeaponVFXRef.spawn_beam_fx(get_tree().current_scene, beam_start, end_pos, Color(0.15, 0.90, 1.0), 0.06, 0.10)
+
+
+func _spawn_rocket(origin: Vector3, dir: Vector3, shot: Dictionary) -> void:
+	var parent := _projectiles_parent if _projectiles_parent != null else get_tree().current_scene
+	if parent == null:
+		return
+	var rocket := ProjectileRef.new()
+	parent.add_child(rocket)
+	rocket.configure_rocket(origin, dir, shot)
+
+
+func _execute_melee_cone(shot: Dictionary, forward: Vector3) -> void:
+	if not is_inside_tree() or _owner_player == null:
+		return
+	var origin := _owner_player.global_position + Vector3(0.0, 1.25 if _is_fps_mode else 0.95, 0.0)
+	var range_m := float(shot.get("range_m", 2.5))
+	var arc_deg := float(shot.get("melee_arc_deg", 120.0))
+	WeaponVFXRef.spawn_blade_trail(get_tree().current_scene, origin, forward, int(shot.get("combo_step", 1)), str(shot.get("id", "katana")), _is_fps_mode)
+	if bool(shot.get("deflects_enemy_projectiles", false)):
+		deflect_projectiles_in_cone(get_tree().get_nodes_in_group("enemy_projectiles"), origin, forward, range_m, arc_deg, float(shot.get("deflect_damage_multiplier", 1.75)))
+
+	var hits := 0
+	var max_hits := int(shot.get("max_targets_per_swing", 4))
+	var armor_mult := float(shot.get("tall_armor_pierce_multiplier", 1.0))
+	for e in get_tree().get_nodes_in_group("enemies"):
+		if hits >= max_hits or not is_instance_valid(e) or not (e is Node3D):
+			continue
+		var en := e as Node3D
+		if is_point_in_melee_cone(_owner_player.global_position, forward, en.global_position, range_m, arc_deg) and en.has_method("take_damage"):
+			var push := (en.global_position - _owner_player.global_position).normalized() * float(shot.get("knockback_mps", 5.0))
+			var will_kill: bool = ("current_hp" in en) and float(en.get("current_hp")) <= float(shot["final_damage"]) * armor_mult
+			en.call("take_damage", float(shot["final_damage"]), push, bool(shot.get("is_crit", false)), str(shot.get("id", "")), armor_mult)
+			shot_hit.emit(bool(shot.get("is_crit", false)), will_kill)
+			hits += 1
+
+
+func _apply_distance_falloff(dmg: float, dist: float, shot: Dictionary) -> float:
+	var start := float(shot.get("falloff_start_m", 999.0))
+	var max_r := float(shot.get("range_m", 55.0))
+	if dist <= start:
+		return dmg
+	var t := clampf((dist - start) / maxf(0.1, max_r - start), 0.0, 1.0)
+	return dmg * lerpf(1.0, float(shot.get("falloff_min_multiplier", 1.0)), t)
+
+
+func _get_combat_ray_origin(muzzle_fallback: Vector3, aim_data: Dictionary = {}) -> Vector3:
+	if _is_fps_mode and aim_data.has("origin"):
+		return aim_data["origin"]
+	if _owner_player != null and _owner_player.is_inside_tree():
+		return _owner_player.global_position + Vector3(0.0, 0.94, 0.0)
+	return muzzle_fallback
+
+
+func _get_muzzle_world_position(_shot: Dictionary) -> Vector3:
+	var def := _loadout.get_selected_def() if _loadout != null else {}
+	if _is_fps_mode and _fps_viewmodel != null and _fps_viewmodel.has_method("get_muzzle_world_position"):
+		return _fps_viewmodel.call("get_muzzle_world_position", def)
+	if _muzzle_node != null and _muzzle_node.is_inside_tree():
+		return _muzzle_node.global_position
+	var off_arr: Array = def.get("asset_spec", {}).get("muzzle_offset_m", [0.0, 0.06, -0.35])
+	if _weapon_socket != null and _weapon_socket.is_inside_tree():
+		return _weapon_socket.to_global(Vector3(float(off_arr[0]), float(off_arr[1]), float(off_arr[2])))
+	return _owner_player.global_position + Vector3(0.0, 1.3, 0.0) if _owner_player != null else global_position
+
+
+func _apply_tps_weapon_shadow_mode() -> void:
+	if _active_visual == null:
+		return
+	var mode := GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if _is_fps_mode else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	_set_shadow_recursive(_active_visual, mode)
+
+
+func _set_shadow_recursive(node: Node, mode: GeometryInstance3D.ShadowCastingSetting) -> void:
+	if node is MeshInstance3D:
+		(node as MeshInstance3D).cast_shadow = mode
+	for c in node.get_children():
+		_set_shadow_recursive(c, mode)

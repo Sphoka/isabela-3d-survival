@@ -1,0 +1,53 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/game/enemy_droid.gd" id="1_enemy_droid"]
+[ext_resource type="PackedScene" uid="uid://d1pejauww2to1" path="res://assets/SK_Droid_Small/SK_Droid_Small.glb" id="2_droid_small"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_small"]
+radius = 0.28
+height = 1.04
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hp"]
+shading_mode = 0
+albedo_color = Color(0.95, 0.2, 0.2, 1)
+billboard_mode = 1
+
+[sub_resource type="QuadMesh" id="QuadMesh_hp"]
+material = SubResource("StandardMaterial3D_hp")
+size = Vector2(0.7, 0.08)
+
+[node name="DroidSmallEnemy" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 23
+script = ExtResource("1_enemy_droid")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.52, 0)
+shape = SubResource("CapsuleShape3D_small")
+
+[node name="SK_Droid_Small" parent="." instance=ExtResource("2_droid_small")]
+
+[node name="TwoBoneIK3D" type="TwoBoneIK3D" parent="SK_Droid_Small/Armature_Droid_Small/Skeleton3D"]
+setting_count = 2
+settings/0/target_node = NodePath("../Target_Foot_L")
+settings/0/root_bone_name = "thigh.L"
+settings/0/middle_bone_name = "shin.L"
+settings/0/end_bone_name = "foot.L"
+settings/1/target_node = NodePath("../Target_Foot_R")
+settings/1/root_bone_name = "thigh.R"
+settings/1/middle_bone_name = "shin.R"
+settings/1/end_bone_name = "foot.R"
+
+[node name="Target_Foot_L" type="Marker3D" parent="SK_Droid_Small/Armature_Droid_Small/Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.14, 0.04, 0)
+
+[node name="Target_Foot_R" type="Marker3D" parent="SK_Droid_Small/Armature_Droid_Small/Skeleton3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.14, 0.04, 0)
+
+[node name="HPBar" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.32, 0)
+
+[node name="Fill" type="MeshInstance3D" parent="HPBar"]
+mesh = SubResource("QuadMesh_hp")
+
+[editable path="SK_Droid_Small"]

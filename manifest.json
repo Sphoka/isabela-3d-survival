@@ -1,0 +1,310 @@
+{
+  "schema_version": "1.0.0",
+  "project": "Projeto Isabela 3D",
+  "godot_version": "4.7.2.stable.official.ed1daf0bf",
+  "renderer": "Forward+",
+  "project_root": "D:/Godot/isabela_scene_test",
+  "main_showcase_scene": "res://scenes/main_isabela_scene.tscn",
+  "assets": [
+    {
+      "id": "SM_Helmet_A",
+      "type": "static_prop",
+      "glb_path": "res://assets/SM_Helmet_A/SM_Helmet_A.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase1_helmets.blend",
+      "tris_lod0": 11094,
+      "generate_lods": true,
+      "materials": ["M_Helmet_Shell_A", "M_Helmet_Visor_A"],
+      "textures": [
+        { "path": "res://assets/SM_Helmet_A/T_Helmet_A_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SM_Helmet_A/T_Helmet_A_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SM_Helmet_A/T_Helmet_A_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" }
+      ]
+    },
+    {
+      "id": "SM_Helmet_B",
+      "type": "static_prop",
+      "glb_path": "res://assets/SM_Helmet_B/SM_Helmet_B.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase1_helmets.blend",
+      "tris_lod0": 11202,
+      "generate_lods": true,
+      "materials": ["M_Helmet_Shell_B", "M_Helmet_Visor_B"],
+      "textures": [
+        { "path": "res://assets/SM_Helmet_B/T_Helmet_B_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SM_Helmet_B/T_Helmet_B_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SM_Helmet_B/T_Helmet_B_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" }
+      ]
+    },
+    {
+      "id": "SK_Droid_Small",
+      "type": "skeletal_character",
+      "glb_path": "res://assets/SK_Droid_Small/SK_Droid_Small.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase2_droid_small.blend",
+      "tris_lod0": 33428,
+      "bones": 27,
+      "ik_modifier": "TwoBoneIK3D",
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SK_Droid_Small/T_Droid_Small_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SK_Droid_Small/T_Droid_Small_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SK_Droid_Small/T_Droid_Small_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" },
+        { "path": "res://assets/SK_Droid_Small/T_Droid_Small_Emissive.png", "resolution": "2048x2048" }
+      ]
+    },
+    {
+      "id": "SK_Droid_Tall",
+      "type": "skeletal_character",
+      "glb_path": "res://assets/SK_Droid_Tall/SK_Droid_Tall.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase3_droid_tall.blend",
+      "tris_lod0": 33048,
+      "bones": 28,
+      "ik_modifier": "TwoBoneIK3D",
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SK_Droid_Tall/T_Droid_Tall_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SK_Droid_Tall/T_Droid_Tall_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SK_Droid_Tall/T_Droid_Tall_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" }
+      ]
+    },
+    {
+      "id": "SM_Ship",
+      "type": "static_vehicle",
+      "glb_path": "res://assets/SM_Ship/SM_Ship.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase4_ship.blend",
+      "tris_lod0": 99096,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SM_Ship/T_Ship_BaseColor.png", "resolution": "4096x4096" },
+        { "path": "res://assets/SM_Ship/T_Ship_Normal.png", "resolution": "4096x4096", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SM_Ship/T_Ship_ORM.png", "resolution": "4096x4096", "channels": "R=AO,G=Roughness,B=Metallic" },
+        { "path": "res://assets/SM_Ship/T_Ship_Emissive.png", "resolution": "4096x4096" }
+      ]
+    },
+    {
+      "id": "SK_Isabela",
+      "type": "skeletal_hero",
+      "glb_path": "res://assets/SK_Isabela/SK_Isabela.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase5_isabela.blend",
+      "tris_lod0": 57924,
+      "bones": 84,
+      "skeleton_profile": "SkeletonProfileHumanoid (0 missing bones)",
+      "spring_bone_chains": 7,
+      "blend_shapes_arkit": 52,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SK_Isabela/T_Isabela_Body_BaseColor.png", "resolution": "4096x4096" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Body_Normal.png", "resolution": "4096x4096", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Body_ORM.png", "resolution": "4096x4096", "channels": "R=AO,G=Roughness,B=Metallic" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Eyes_BaseColor.png", "resolution": "1024x1024" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Eyelashes.png", "resolution": "512x256" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Hair_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Hair_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Hair_ORM.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Top_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Top_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Top_ORM.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Lingerie_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Lingerie_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SK_Isabela/T_Isabela_Lingerie_ORM.png", "resolution": "2048x2048" }
+      ]
+    },
+    {
+      "id": "SK_Isabela_Anims",
+      "type": "animation_library",
+      "glb_path": "res://assets/SK_Isabela/SK_Isabela_Anims.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase8_isabela_animations.blend",
+      "bones": 84,
+      "clips": 31,
+      "fps": 24
+    },
+    {
+      "id": "FPS_Arms",
+      "type": "fps_viewmodel_rig",
+      "glb_path": "res://assets/SK_Isabela/FPS_Arms.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase8_fps_arms.blend",
+      "bones": 39,
+      "clips": 9,
+      "fps": 24,
+      "weapon_socket": "FPS_Arms_Rig/Skeleton3D/RightHand/FPSWeaponSocket"
+    },
+    {
+      "id": "SM_DesertDunes",
+      "type": "static_environment",
+      "glb_path": "res://assets/ENV_DesertCoast/SM_DesertDunes.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase6_validation_scene.blend",
+      "tris_lod0": 16800,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/ENV_DesertCoast/T_DesertDunes_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/ENV_DesertCoast/T_DesertDunes_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/ENV_DesertCoast/T_DesertDunes_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" }
+      ]
+    },
+    {
+      "id": "SM_ShoreRocks",
+      "type": "static_environment",
+      "glb_path": "res://assets/ENV_DesertCoast/SM_ShoreRocks.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase6_validation_scene.blend",
+      "tris_lod0": 960,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/ENV_DesertCoast/T_ShoreRocks_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/ENV_DesertCoast/T_ShoreRocks_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/ENV_DesertCoast/T_ShoreRocks_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" }
+      ]
+    },
+    {
+      "id": "SM_Weapon_Pistol",
+      "type": "weapon_prop",
+      "glb_path": "res://assets/SM_Weapon_Pistol/SM_Weapon_Pistol.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase7_weapons_crates.blend",
+      "tris_lod0": 2508,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SM_Weapon_Pistol/T_Weapon_Pistol_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SM_Weapon_Pistol/T_Weapon_Pistol_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SM_Weapon_Pistol/T_Weapon_Pistol_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" },
+        { "path": "res://assets/SM_Weapon_Pistol/T_Weapon_Pistol_Emissive.png", "resolution": "2048x2048" }
+      ]
+    },
+    {
+      "id": "SM_Weapon_Lightsaber",
+      "type": "weapon_prop",
+      "glb_path": "res://assets/SM_Weapon_Lightsaber/SM_Weapon_Lightsaber.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase7_weapons_crates.blend",
+      "tris_lod0": 3568,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SM_Weapon_Lightsaber/T_Weapon_Lightsaber_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SM_Weapon_Lightsaber/T_Weapon_Lightsaber_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SM_Weapon_Lightsaber/T_Weapon_Lightsaber_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" },
+        { "path": "res://assets/SM_Weapon_Lightsaber/T_Weapon_Lightsaber_Emissive.png", "resolution": "2048x2048" }
+      ]
+    },
+    {
+      "id": "SM_Weapon_Shotgun",
+      "type": "weapon_prop",
+      "glb_path": "res://assets/SM_Weapon_Shotgun/SM_Weapon_Shotgun.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase7_weapons_crates.blend",
+      "tris_lod0": 4824,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SM_Weapon_Shotgun/T_Weapon_Shotgun_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SM_Weapon_Shotgun/T_Weapon_Shotgun_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SM_Weapon_Shotgun/T_Weapon_Shotgun_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" },
+        { "path": "res://assets/SM_Weapon_Shotgun/T_Weapon_Shotgun_Emissive.png", "resolution": "2048x2048" }
+      ]
+    },
+    {
+      "id": "SM_Weapon_RocketLauncher",
+      "type": "weapon_prop",
+      "glb_path": "res://assets/SM_Weapon_RocketLauncher/SM_Weapon_RocketLauncher.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase7_weapons_crates.blend",
+      "tris_lod0": 5492,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SM_Weapon_RocketLauncher/T_Weapon_RocketLauncher_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SM_Weapon_RocketLauncher/T_Weapon_RocketLauncher_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SM_Weapon_RocketLauncher/T_Weapon_RocketLauncher_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" },
+        { "path": "res://assets/SM_Weapon_RocketLauncher/T_Weapon_RocketLauncher_Emissive.png", "resolution": "2048x2048" }
+      ]
+    },
+    {
+      "id": "SM_Weapon_Katana",
+      "type": "weapon_prop",
+      "glb_path": "res://assets/SM_Weapon_Katana/SM_Weapon_Katana.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase7_weapons_crates.blend",
+      "tris_lod0": 3756,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SM_Weapon_Katana/T_Weapon_Katana_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SM_Weapon_Katana/T_Weapon_Katana_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SM_Weapon_Katana/T_Weapon_Katana_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" },
+        { "path": "res://assets/SM_Weapon_Katana/T_Weapon_Katana_Emissive.png", "resolution": "2048x2048" }
+      ]
+    },
+    {
+      "id": "SM_Weapon_LaserGun",
+      "type": "weapon_prop",
+      "glb_path": "res://assets/SM_Weapon_LaserGun/SM_Weapon_LaserGun.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase7_weapons_crates.blend",
+      "tris_lod0": 5552,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SM_Weapon_LaserGun/T_Weapon_LaserGun_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SM_Weapon_LaserGun/T_Weapon_LaserGun_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SM_Weapon_LaserGun/T_Weapon_LaserGun_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" },
+        { "path": "res://assets/SM_Weapon_LaserGun/T_Weapon_LaserGun_Emissive.png", "resolution": "2048x2048" }
+      ]
+    },
+    {
+      "id": "SM_Crate_Health",
+      "type": "pickup_prop",
+      "glb_path": "res://assets/SM_Crate_Health/SM_Crate_Health.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase7_weapons_crates.blend",
+      "tris_lod0": 2968,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SM_Crate_Health/T_Crate_Health_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SM_Crate_Health/T_Crate_Health_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SM_Crate_Health/T_Crate_Health_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" },
+        { "path": "res://assets/SM_Crate_Health/T_Crate_Health_Emissive.png", "resolution": "2048x2048" }
+      ]
+    },
+    {
+      "id": "SM_Crate_Ammo",
+      "type": "pickup_prop",
+      "glb_path": "res://assets/SM_Crate_Ammo/SM_Crate_Ammo.glb",
+      "blend_source": "D:/Godot/isabela_scene_test/blend_sources/fase7_weapons_crates.blend",
+      "tris_lod0": 3088,
+      "generate_lods": true,
+      "textures": [
+        { "path": "res://assets/SM_Crate_Ammo/T_Crate_Ammo_BaseColor.png", "resolution": "2048x2048" },
+        { "path": "res://assets/SM_Crate_Ammo/T_Crate_Ammo_Normal.png", "resolution": "2048x2048", "format": "OpenGL_Y+" },
+        { "path": "res://assets/SM_Crate_Ammo/T_Crate_Ammo_ORM.png", "resolution": "2048x2048", "channels": "R=AO,G=Roughness,B=Metallic" },
+        { "path": "res://assets/SM_Crate_Ammo/T_Crate_Ammo_Emissive.png", "resolution": "2048x2048" }
+      ]
+    }
+  ],
+  "shaders": [
+    {
+      "path": "res://shaders/shallow_mirror_water.gdshader",
+      "material": "res://shaders/M_ShallowMirrorWater.tres",
+      "type": "spatial_planar_ssr",
+      "base_roughness": 0.038,
+      "ripple_centers_xz": [[0.02, 0.20], [-0.06, -0.22], [-1.55, -2.40], [1.75, -2.85]]
+    }
+  ],
+  "scenes": [
+    "res://scenes/main_isabela_scene.tscn",
+    "res://scenes/test_fase1_helmets.tscn",
+    "res://scenes/test_fase2_droid_small.tscn",
+    "res://scenes/test_fase3_droid_tall.tscn",
+    "res://scenes/test_fase4_ship.tscn",
+    "res://scenes/test_fase5_isabela.tscn",
+    "res://scenes/game/playable_arena.tscn",
+    "res://scenes/game/player_isabela.tscn",
+    "res://scenes/game/droid_small_enemy.tscn",
+    "res://scenes/game/droid_tall_enemy.tscn"
+  ],
+  "game_design": {
+    "design_doc": "res://GAME_DESIGN.md",
+    "balance_config": "res://data/game_balance.json",
+    "playable_arena_scene": "res://scenes/game/playable_arena.tscn"
+  },
+  "validation_renders": [
+    "C:/Users/thiag/.gemini/antigravity/brain/7940ad05-2125-4124-a03f-be00a0642d08/scratch/previews/godot_scene_hero.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/7940ad05-2125-4124-a03f-be00a0642d08/scratch/previews/godot_scene_wide.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/7940ad05-2125-4124-a03f-be00a0642d08/scratch/previews/godot_scene_water_closeup.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/7940ad05-2125-4124-a03f-be00a0642d08/scratch/previews/scene_cycles_validation.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/7940ad05-2125-4124-a03f-be00a0642d08/scratch/previews/scene_cycles_wide.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/94c20e8c-9c88-4781-8f2e-e81a542062c8/scratch/previews/godot_game_combat.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/94c20e8c-9c88-4781-8f2e-e81a542062c8/scratch/previews/godot_game_upgrade_modal.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/94c20e8c-9c88-4781-8f2e-e81a542062c8/scratch/previews/weapon_grip_closeup.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/4ac4aa3a-b610-4d09-80c9-4dd4b448ea7a/scratch/shipped_tps_cam_pistol.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/4ac4aa3a-b610-4d09-80c9-4dd4b448ea7a/scratch/shipped_tps_hand_shotgun.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/4ac4aa3a-b610-4d09-80c9-4dd4b448ea7a/scratch/shipped_tps_hand_katana.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/4ac4aa3a-b610-4d09-80c9-4dd4b448ea7a/scratch/v2_fps_pistol.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/4ac4aa3a-b610-4d09-80c9-4dd4b448ea7a/scratch/v2_fps_pistol_doom.png",
+    "C:/Users/thiag/.gemini/antigravity/brain/4ac4aa3a-b610-4d09-80c9-4dd4b448ea7a/scratch/v2_fps_katana.png"
+  ]
+}

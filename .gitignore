@@ -1,0 +1,35 @@
+# Godot 4.x local cache and exports (keep *.import and *.uid committed!)
+.godot/
+.export/
+builds/
+*.translation
+
+# Local agent/editor backups and logs
+.backups/
+*.bak
+*.log
+*.tmp
+
+# Blender autosave backups
+*.blend1
+*.blend2
+*.blend@
+
+# Assets2Godot runtime-downloaded client binaries (if downloaded by editor dock)
+addons/assets2godot/client/**/*.exe
+addons/assets2godot/client/**/*.dll
+addons/assets2godot/client/**/*.so
+addons/assets2godot/client/**/*.dylib
+addons/assets2godot/client/**/bk_client*
+
+# Python / uv local virtualenvs
+.venv/
+__pycache__/
+*.py[cod]
+
+# OS / IDE metadata
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
