@@ -23,32 +23,36 @@
 
 ## 1. Pilar 3.1 — Boss Orbital a cada 5 Ondas (`SM_Ship` + `BossSentinel`)
 
-### Conceito de Gameplay
-- Em ondas múltiplas de 5 (`wave % 5 == 0`: Onda 5, 10, 15...), a Nave-Mãe `SM_Ship` desce um **Boss Droide Comandante (`boss_sentinel`)** e passa a coordenar **ataques orbitais telegrafados**.
+### Conceito de Gameplay (Brainstorm Fechado)
+- Em ondas múltiplas de 5 (`wave % 5 == 0`: Onda 5, 10, 15...), a Nave-Mãe `SM_Ship` desce um **Boss Orbital (`boss_sentinel`)** e coordena **Chuva de Cápsulas / Reforços**.
+- **Referências Visuais em T-Pose salvas em `docs/references/`** (para modelagem 3D futura em Blender → `res://assets/SK_Boss_Orbital/SK_Boss_Orbital.glb`):
+  - `docs/references/boss_char1_skull_cyborg_tpose.jpg` (Ciborgue com máscara de caveira e cabelo preto/vermelho)
+  - `docs/references/boss_char2_white_android_tpose.jpg` (Androide branco com placa facial lisa e caveira vermelha no peito)
+  - `docs/references/boss_char3_anubis_ninja_tpose.jpg` (Cyber-Ninja / Anubis preto fosco com olhos âmbar)
 - Ao derrotar o Boss, o jogador recebe bônus alto de XP/score e **1 draft de Upgrade com raridade mínima `Lendário` garantida**.
 
 ### Arquitetura Proposta
 
 #### [NEW] `scenes/game/boss_sentinel.tscn` & `scripts/game/boss_sentinel.gd` (`< 240` linhas)
-- **Visual & Rig:** reaproveitar `SK_Droid_Tall.glb` escalado (`1.75x`) com material overlay/emissive carmesim-dourado e `CollisionShape3D` proporcional (`radius = 0.65`, `height = 3.4`, `collision_layer = 4`).
-- **Fases de Combate:**
-  - **Fase 1 (`HP > 50%`):** perseguição com canhão duplo de plasma (`ProjectileController`) + golpe pesado melee em curta distância.
-  - **Fase 2 (`HP <= 50%` — Enrage):** aumenta velocidade em `+25%`, reduz cooldown de rajada e reduz intervalo do **Ataque Orbital da `SM_Ship`**.
-- **Sinais:** `boss_spawned(boss_node, max_hp)`, `hp_updated(current_hp, max_hp)`, `died(...)` (compatível com `WaveSpawner` / `ArenaCoordinator`).
+- **Visual Desacoplado:** lê `boss.asset_path` em `data/game_balance.json` (`SK_Boss_Orbital.glb`, `+Y Up`, `-Z` frente no Godot, pivô `(0,0,0)` nos pés), com fallback provisório (`SK_Droid_Tall` escalado) até o `.glb` final entrar.
+- **Fase 1 (`HP > 50%`):** perseguição tática + canhão pesado (`ProjectileController`) + golpe melee em curta distância; solicita **Chuva de Cápsulas** periódica à `SM_Ship` (`capsule_wave_cooldown_s = 11.0`, `capsules_per_rain = 2`).
+- **Fase 2 (`HP <= 50%` — Enrage):** dispara **salva orbital massiva (`4` cápsulas simultâneas)**, ganha **`+25%` de velocidade** (`enrage_speed_multiplier = 1.25`), reduz cooldown e dispara **rajadas duplas** (`burst_count = 2`).
+- **Sinais:** `hp_updated(current_hp, max_hp)`, `enraged()`, `capsule_rain_requested(count)`, `died(...)`.
 
-#### [NEW] `scripts/game/orbital_strike_vfx.gd` (`< 160` linhas)
-- **Mecânica de Telegráfia:**
-  1. Cria um anel marcador emissivo no chão (`y = 0.04`) na posição prevista do jogador (`radius = 3.8 m`), pulsando por `orbital_telegraph_s` (`1.4 s`).
-  2. Após o telegrafamento, dispara um feixe vertical da altura da `SM_Ship` (`y = 24 -> 0`), toca SFX (`orbital_strike` via `AudioManager`), aplica dano em área (`45.0` base) no jogador caso ainda esteja dentro do raio (respeitando dash `iframes`), e spawna partículas de impacto reutilizando `DroidDestructionVFX.spawn_explosion_burst()`.
-  - **Performance:** usar `CylinderMesh` / `StandardMaterial3D` estáticos compartilhados e `cast_shadow = OFF`.
+#### [NEW] `scripts/game/orbital_drop_pod.gd` (`< 180` linhas) — Chuva de Cápsulas da `SM_Ship`
+- Spawna em altitude (`y = 26.0`), exibe anel de alerta pulsante no chão (`telegraph_s = 1.35 s`) e desce em alta velocidade.
+- **Impacto:** causa dano/knockback se o jogador permanecer dentro de `2.4 m` (respeitando dash `iframes`), com explosão e SFX (`pod_impact`).
+- **Cápsula Destrutível (`StaticBody3D`, grupo `"damageable_props"`, `HP = 90.0`):** fica `3.0 s` no chão antes de abrir:
+  - Se **destruída a tempo**, explode sem gerar reforços e concede bônus de XP/munição.
+  - Se **não destruída em `3.0 s`**, libera `1` droid (`droid_small` na Onda 5, `droid_spider` na Onda 10+).
+- **Performance:** malha/material estáticos compartilhados (`cast_shadow = OFF` no marcador) e verificação `ArenaProps.is_position_clear()`.
 
 #### [NEW] `scripts/game/hud_boss_bar.gd` (`< 120` linhas)
-- Barra de HP estilizada no topo da tela (abaixo da barra de XP), oculta por padrão (`visible = false`), exibindo nome `"SENTINELA ORBITAL — ONDA X"` e `ProgressBar` carmesim-dourada.
-- Conectada por `HUDController.bind()` apenas via sinais (`boss_spawned`, `boss.hp_updated`, `boss.died`) — zero polling no `_process()`.
+- Barra de HP fixa no topo do HUD (`visible = false` fora de ondas de Boss), exibe `"BOSS ORBITAL — ONDA X"` e muda para estilo dourado/carmesim ao entrar em **Enrage**.
 
 #### [MODIFY] `data/game_balance.json`, `scripts/game/balance_db.gd`, `scripts/game/wave_spawner.gd`, `scripts/game/game_manager.gd`, `scripts/game/upgrade_system.gd`
-- `game_balance.json`: adicionar seção `"boss"` (`base_hp: 1400.0`, `hp_scale_per_tier: 1.65`, `orbital_cooldown_s: 6.5`, `orbital_telegraph_s: 1.4`, `orbital_radius_m: 3.8`, `orbital_damage: 45.0`, `xp_reward: 260`, `score_reward: 1500`).
-- `WaveSpawner`: em `wave % 5 == 0`, enfileirar `"boss_sentinel"` além da escolta reduzida; `GameManager` / `UpgradeSystem`: adicionar parâmetro opcional `min_rarity: String = ""` em `roll_choices(...)` para garantir pelo menos 1 carta `"legendary"` ao abater o Boss.
+- `game_balance.json`: adicionar seção `"boss"` (`asset_path`, `base_hp: 1500.0`, `hp_scale_per_tier: 1.65`, `enrage_hp_ratio: 0.50`, `enrage_speed_multiplier: 1.25`, `capsule_wave_cooldown_s: 11.0`, `capsules_per_rain: 2`, `enrage_salvo_count: 4`, `pod_hp: 90.0`, `pod_hatch_delay_s: 3.0`, `xp_reward: 260`, `score_reward: 1500`, `guaranteed_legendary_upgrade: true`).
+- `WaveSpawner`: em `wave % 5 == 0`, enfileirar `"boss_sentinel"`; `UpgradeSystem`: parâmetro opcional `min_rarity: String = ""` em `roll_choices(...)` para garantir carta `"legendary"` ao abater o Boss.
 
 ---
 
