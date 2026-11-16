@@ -4,6 +4,7 @@ extends Node3D
 
 const FPS_ARMS_PATH := "res://assets/SK_Isabela/FPS_Arms.glb"
 const FPSOpticHelperRef := preload("res://scripts/game/fps_optic_helper.gd")
+const WeaponPoolRef := preload("res://scripts/game/weapon_pool_helper.gd")
 
 const WEAPON_TWEAKS := {
 	"pistol": {"pos": Vector3(0.07, -0.06, -0.02), "ads_pos": Vector3(-0.0917, -0.015, 0.03), "rot": Vector3(0.0, 0.025, 0.0), "ads_rot": Vector3.ZERO, "doom_x": -0.0917, "recoil_z": 0.045, "recoil_pitch": 0.08},
@@ -44,6 +45,7 @@ var _overheat_active: bool = false
 var _overheat_phase: float = 0.0
 var _cool_ready_left: float = 0.0
 var _optic_helper := FPSOpticHelperRef.new()
+var _fps_pool := WeaponPoolRef.new()
 
 
 func _ready() -> void:
@@ -69,6 +71,7 @@ func ensure_built() -> void:
 			_optic_helper.disable_shadows_recursive(_arms_instance)
 			_anim_player = _arms_instance.find_child("AnimationPlayer", true, false) as AnimationPlayer
 			if _anim_player != null:
+				WeaponPoolRef.sanitize_fps_animations(_anim_player)
 				for loop_name in ["FPS_Idle", "FPS_Walk"]:
 					if _anim_player.has_animation(loop_name):
 						_anim_player.get_animation(loop_name).loop_mode = Animation.LOOP_LINEAR
@@ -101,31 +104,26 @@ func toggle_doom_centered() -> bool:
 	return doom_centered
 
 
+func get_pooled_weapon_count() -> int:
+	return _fps_pool.get_count()
+
+
+func prewarm_weapons(defs: Array) -> void:
+	ensure_built()
+	_fps_pool.prewarm_all(defs, _weapon_socket, true, _optic_helper)
+
+
 func set_weapon(def: Dictionary) -> void:
 	ensure_built()
+	_optic_helper.set_aiming(false, str(_weapon_def.get("id", "")))
+	_optic_helper.set_weapon_overlay(_active_weapon, Color(0, 0, 0, 0))
 	_weapon_def = def.duplicate(true)
-	if _active_weapon != null:
-		_active_weapon.queue_free()
-		_active_weapon = null
-		_muzzle_node = null
-
-	var asset_path := str(def.get("asset_path", ""))
-	if asset_path.is_empty() or not ResourceLoader.exists(asset_path):
+	var entry := _fps_pool.activate(def, _weapon_socket, true, _optic_helper)
+	_active_weapon = entry.get("node") as Node3D
+	_muzzle_node = entry.get("muzzle") as Node3D
+	if _active_weapon == null:
 		return
-	var ps := load(asset_path) as PackedScene
-	if ps == null:
-		return
-	_active_weapon = ps.instantiate() as Node3D
-	_weapon_socket.add_child(_active_weapon)
-	var gpos: Array = def.get("fps_grip_pos", [0.0, 0.0, 0.0])
-	var grot: Array = def.get("fps_grip_rot_deg", [0.0, 0.0, 0.0])
-	if gpos.size() >= 3:
-		_active_weapon.position = Vector3(float(gpos[0]), float(gpos[1]), float(gpos[2]))
-	if grot.size() >= 3:
-		_active_weapon.rotation_degrees = Vector3(float(grot[0]), float(grot[1]), float(grot[2]))
-	_optic_helper.disable_shadows_recursive(_active_weapon)
 	_optic_helper.bind_weapon(_active_weapon)
-	_muzzle_node = _active_weapon.get_node_or_null("Muzzle") as Node3D
 	_draw_left = 0.22
 	_overheat_active = false
 	_cool_ready_left = 0.0
@@ -133,7 +131,7 @@ func set_weapon(def: Dictionary) -> void:
 	if visible:
 		_play_clip("FPS_Draw", 0.08, true)
 	if str(def.get("id", "")) == "lightsaber":
-		var blade := _active_weapon.find_child("SM_Weapon_Lightsaber_Blade", true, false) as Node3D
+		var blade := entry.get("blade") as Node3D
 		if blade != null:
 			blade.scale.y = 0.05
 			var tw := blade.create_tween()

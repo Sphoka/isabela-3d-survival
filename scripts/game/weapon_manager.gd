@@ -5,6 +5,7 @@ extends Node3D
 const WeaponLoadoutRef := preload("res://scripts/game/weapon_loadout.gd")
 const ProjectileRef := preload("res://scripts/game/projectile_controller.gd")
 const WeaponVFXRef := preload("res://scripts/game/weapon_vfx.gd")
+const WeaponPoolRef := preload("res://scripts/game/weapon_pool_helper.gd")
 
 signal shot_hit(is_crit: bool, is_kill: bool)
 signal shot_executed(weapon_id: String)
@@ -20,6 +21,7 @@ var _projectiles_parent: Node3D
 var _fps_viewmodel: Node3D
 var _is_fps_mode: bool = false
 var _rng := RandomNumberGenerator.new()
+var _tps_pool := WeaponPoolRef.new()
 
 
 func _ready() -> void:
@@ -33,18 +35,25 @@ func setup(loadout: WeaponLoadoutRef, owner_player: Node3D, proj_parent: Node3D 
 	_owner_player = owner_player
 	if proj_parent != null:
 		_projectiles_parent = proj_parent
+	_prewarm_pools()
 	refresh_equipped_mesh()
 
 
 func set_weapon_socket(socket: Node3D) -> void:
 	_weapon_socket = socket
+	_prewarm_pools()
 	refresh_equipped_mesh()
+
+
+func get_pooled_weapon_count() -> int:
+	return _tps_pool.get_count()
 
 
 func set_fps_context(fps_mode: bool, viewmodel: Node3D) -> void:
 	_is_fps_mode = fps_mode
 	_fps_viewmodel = viewmodel
 	_apply_tps_weapon_shadow_mode()
+	_prewarm_pools()
 	if _fps_viewmodel != null and _loadout != null and _fps_viewmodel.has_method("set_weapon"):
 		_fps_viewmodel.call("set_weapon", _loadout.get_selected_def())
 
@@ -57,26 +66,24 @@ func refresh_equipped_mesh() -> void:
 		_fps_viewmodel.call("set_weapon", def)
 	if _weapon_socket == null:
 		return
+	var entry := _tps_pool.activate(def, _weapon_socket, false)
+	_active_visual = entry.get("node") as Node3D
+	_muzzle_node = entry.get("muzzle") as Node3D
 	if _active_visual != null:
-		_active_visual.queue_free()
-		_active_visual = null
-		_muzzle_node = null
-	var asset_path := str(def.get("asset_path", ""))
-	if asset_path.is_empty() or not ResourceLoader.exists(asset_path):
+		_apply_tps_weapon_shadow_mode()
+
+
+func _prewarm_pools() -> void:
+	if _loadout == null:
 		return
-	var ps := load(asset_path) as PackedScene
-	if ps == null:
+	var db: Variant = _loadout.get("_db")
+	if db == null or not db.has_method("get_all_weapons"):
 		return
-	_active_visual = ps.instantiate() as Node3D
-	_weapon_socket.add_child(_active_visual)
-	var gpos: Array = def.get("tps_grip_pos", [0.0, 0.0, 0.0])
-	var grot: Array = def.get("tps_grip_rot_deg", [0.0, 0.0, 0.0])
-	if gpos.size() >= 3:
-		_active_visual.position = Vector3(float(gpos[0]), float(gpos[1]), float(gpos[2]))
-	if grot.size() >= 3:
-		_active_visual.rotation_degrees = Vector3(float(grot[0]), float(grot[1]), float(grot[2]))
-	_apply_tps_weapon_shadow_mode()
-	_muzzle_node = _active_visual.get_node_or_null("Muzzle") as Node3D
+	var defs: Array = db.call("get_all_weapons")
+	if _weapon_socket != null:
+		_tps_pool.prewarm_all(defs, _weapon_socket, false)
+	if _fps_viewmodel != null and _fps_viewmodel.has_method("prewarm_weapons"):
+		_fps_viewmodel.call("prewarm_weapons", defs)
 
 
 func execute_shot(shot: Dictionary, aim_data: Dictionary) -> void:
@@ -116,13 +123,11 @@ func apply_spread(dir: Vector3, spread_deg: float) -> Vector3:
 	if spread_deg <= 0.0001:
 		return dir.normalized()
 	var rad := deg_to_rad(spread_deg)
-	var yaw := _rng.randf_range(-rad, rad)
-	var pitch := _rng.randf_range(-rad, rad)
 	var right := dir.cross(Vector3.UP).normalized()
 	if right.length_squared() < 0.01:
 		right = Vector3.RIGHT
 	var up := right.cross(dir).normalized()
-	return (dir + right * tan(yaw) + up * tan(pitch)).normalized()
+	return (dir + right * tan(_rng.randf_range(-rad, rad)) + up * tan(_rng.randf_range(-rad, rad))).normalized()
 
 
 func is_point_in_melee_cone(origin: Vector3, forward: Vector3, point: Vector3, range_m: float, arc_deg: float) -> bool:
@@ -260,9 +265,7 @@ func _apply_distance_falloff(dmg: float, dist: float, shot: Dictionary) -> float
 	var max_r := float(shot.get("range_m", 55.0))
 	if dist <= start:
 		return dmg
-	var t := clampf((dist - start) / maxf(0.1, max_r - start), 0.0, 1.0)
-	return dmg * lerpf(1.0, float(shot.get("falloff_min_multiplier", 1.0)), t)
-
+	return dmg * lerpf(1.0, float(shot.get("falloff_min_multiplier", 1.0)), clampf((dist - start) / maxf(0.1, max_r - start), 0.0, 1.0))
 
 func _get_combat_ray_origin(muzzle_fallback: Vector3, aim_data: Dictionary = {}) -> Vector3:
 	if _is_fps_mode and aim_data.has("origin"):
@@ -270,7 +273,6 @@ func _get_combat_ray_origin(muzzle_fallback: Vector3, aim_data: Dictionary = {})
 	if _owner_player != null and _owner_player.is_inside_tree():
 		return _owner_player.global_position + Vector3(0.0, 0.94, 0.0)
 	return muzzle_fallback
-
 
 func _get_muzzle_world_position(_shot: Dictionary) -> Vector3:
 	var def := _loadout.get_selected_def() if _loadout != null else {}

@@ -47,8 +47,8 @@ fog_sky_affect = 0.65
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_water"]
 size = Vector2(300, 300)
-subdivide_width = 64
-subdivide_depth = 64
+subdivide_width = 32
+subdivide_depth = 32
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_floor"]
 size = Vector3(120, 1, 120)

@@ -1,5 +1,22 @@
 # CHANGELOG — Projeto Isabela 3D
 
+## [2026-11-16 12:16] Otimização de Desempenho, VRAM e Troca de Armas `O(1)`
+- **Backups criados**: `D:\Godot\isabela_scene_test\.backups\*.20261116_*.bak`.
+- **Troca de armas `O(1)` sem engasgos**:
+  - Adicionado [`scripts/game/weapon_pool_helper.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/weapon_pool_helper.gd) e integrado em [`scripts/game/weapon_manager.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/weapon_manager.gd) e [`scripts/game/fps_viewmodel.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/fps_viewmodel.gd): todas as 7 armas são pré-instanciadas uma única vez nos sockets TPS e FPS e alternadas via `visible`, além de remover trilhas `TYPE_SCALE_3D` degeneradas de `ThumbDistal` em `FPS_Arms.glb`.
+  - Redução medida (`Forward+` RTX 3060): troca de arma TPS caiu de **`323–630 ms` → `8.6–37.2 ms`** (`1.8 ms` em re-seleção) e FPS de **`65–516 ms` → `2.7–7.8 ms`**.
+- **Compressão VRAM & Orçamento de Texturas**:
+  - Atualizados `182` arquivos `.png.import`/`.jpg.import` 3D para `compress/mode=2` (VRAM Compressed BPTC/S3TC) com `process/size_limit` (`2048` para `SM_Ship`/`SK_Isabela*`/`ENV_DesertCoast`, `1024` para armas/droids/caixas/capacetes), preservando `assets/ui/main_menu_bg.png`.
+  - Redução medida: **texturas de `1.815 MB` → `299.3 MB`** (`-83,5%`) e **VRAM total de `2.037,8 MB` → `427,0 MB`** (`-79%`).
+- **VFX/Explosões Compartilhados, Geometria & HUD sem Alocações**:
+  - [`scripts/game/weapon_vfx.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/weapon_vfx.gd) e [`scripts/game/droid_destruction_vfx.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/droid_destruction_vfx.gd): cache estático de `Mesh`/`Shape3D`/`StandardMaterial3D` e `warmup()` no boot da arena via [`scripts/game/arena_coordinator.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/arena_coordinator.gd) (que também desativa `cast_shadow` em `SM_Ship` e faz throttle de `0.08 s` no sort de ondulação da água).
+  - [`scripts/game/arena_electric_perimeter.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/arena_electric_perimeter.gd), [`scripts/game/arena_props.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/arena_props.gd) e [`scenes/game/playable_arena.tscn`](file:///D:/Godot/isabela_scene_test/scenes/game/playable_arena.tscn): malhas compartilhadas low-poly nos 16 postes, `WaterPlane` `32×32`, remoção de sombras em frisos/capacetes decorativos (`PRIMS` caiu de **`1.041.286` → `449.978`**, `DRAW_CALLS` **`286` → `172`**).
+  - [`scripts/game/hud_weapon_bar.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/hud_weapon_bar.gd): reutilização de `StyleBoxFlat` em cache + dirty-check eliminando recriação por quadro.
+- **Preset de Qualidade Gráfica (`Baixo` / `Médio` / `Alto`)**:
+  - Adicionado `graphics_quality` em [`scripts/game/settings_manager.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/settings_manager.gd) e [`scripts/game/settings_modal_ui.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/settings_modal_ui.gd) (padrão `2 = Alto`), controlando escala 3D, SSR, glow e sombras em tempo real.
+- **Testes**:
+  - Adicionada suíte [`tests/test_optimization_and_pooling.gd`](file:///D:/Godot/isabela_scene_test/tests/test_optimization_and_pooling.gd); **`14/14` suítes headless passaram** (`TESTS_SUMMARY: total=14 failed=0`) e `0` violações `< 300` linhas (`MAX_LINES=299`).
+
 ## [2026-11-16 11:13] Cena Principal e Atalho do Desktop (`main_menu.tscn`)
 - **Backups criados**: `D:\Godot\isabela_scene_test\.backups\project.godot.20261116_111337.bak`, `CHANGELOG.md.20261116_111337.bak`, `Iniciar Isabela 3D.bat.20261116_111337.bak`.
 - **`project.godot` (linha 14)**:

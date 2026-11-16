@@ -30,6 +30,8 @@ var _arc_redraw_accum: float = 0.0
 var _barrier_mat: StandardMaterial3D
 var _coil_mat: StandardMaterial3D
 var _arc_mat: StandardMaterial3D
+var _post_mesh: CylinderMesh
+var _coil_mesh: SphereMesh
 var _arc_mesh: ImmediateMesh
 var _arc_instance: MeshInstance3D
 var _shock_light: OmniLight3D
@@ -161,23 +163,32 @@ func _build_visuals() -> void:
 
 
 func _spawn_pylon(pos: Vector3, post_mat: StandardMaterial3D) -> void:
+	if _post_mesh == null:
+		_post_mesh = CylinderMesh.new()
+		_post_mesh.top_radius = 0.18
+		_post_mesh.bottom_radius = 0.26
+		_post_mesh.height = 2.3
+		_post_mesh.radial_segments = 12
+		_post_mesh.rings = 2
+	if _coil_mesh == null:
+		_coil_mesh = SphereMesh.new()
+		_coil_mesh.radius = 0.24
+		_coil_mesh.height = 0.48
+		_coil_mesh.radial_segments = 12
+		_coil_mesh.rings = 6
+
 	var post := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.18
-	cyl.bottom_radius = 0.26
-	cyl.height = 2.3
-	post.mesh = cyl
+	post.mesh = _post_mesh
 	post.position = pos + Vector3(0.0, 1.15, 0.0)
 	post.material_override = post_mat
+	post.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(post)
 
 	var coil := MeshInstance3D.new()
-	var sph := SphereMesh.new()
-	sph.radius = 0.24
-	sph.height = 0.48
-	coil.mesh = sph
+	coil.mesh = _coil_mesh
 	coil.position = pos + Vector3(0.0, 2.25, 0.0)
 	coil.material_override = _coil_mat
+	coil.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(coil)
 
 

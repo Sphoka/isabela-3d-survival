@@ -10,6 +10,7 @@ const DEFAULTS := {
 	"sfx_volume": 0.85,
 	"fullscreen": false,
 	"vsync": true,
+	"graphics_quality": 2,
 	"fov": 66.0,
 	"mouse_sensitivity": 0.0022,
 	"controller_sensitivity": 3.4,
@@ -79,7 +80,7 @@ static func save() -> int:
 static func apply_all(tree: SceneTree = null) -> void:
 	ensure_loaded()
 	apply_audio(tree)
-	apply_video()
+	apply_video(tree)
 	if tree != null:
 		apply_runtime_player(tree)
 
@@ -95,8 +96,22 @@ static func apply_audio(tree: SceneTree = null) -> void:
 				am.call("apply_user_volumes", float(get_val("music_volume")), float(get_val("sfx_volume")))
 
 
-static func apply_video() -> void:
+static func apply_video(tree: SceneTree = null) -> void:
 	ensure_loaded()
+	var q := clampi(int(get_val("graphics_quality")), 0, 2)
+	if tree != null and tree.root != null:
+		var scale := 1.0 if q >= 2 else (0.90 if q == 1 else 0.75)
+		tree.root.scaling_3d_scale = scale
+		var cur := tree.current_scene if tree.current_scene != null else tree.root
+		if cur != null:
+			for we in cur.find_children("*", "WorldEnvironment", true, false):
+				var env := (we as WorldEnvironment).environment
+				if env != null:
+					env.ssr_enabled = q >= 1
+					env.ssr_max_steps = 48 if q >= 2 else 24
+					env.glow_enabled = q >= 1
+			for dl in cur.find_children("*", "DirectionalLight3D", true, false):
+				(dl as DirectionalLight3D).shadow_enabled = q >= 1
 	if DisplayServer.get_name() == "headless":
 		return
 	var fs := bool(get_val("fullscreen"))
@@ -135,7 +150,7 @@ static func _section_for(key: String) -> String:
 	match key:
 		"master_volume", "music_volume", "sfx_volume":
 			return "audio"
-		"fullscreen", "vsync", "fov":
+		"fullscreen", "vsync", "fov", "graphics_quality":
 			return "video"
 		_:
 			return "controls"

@@ -10,6 +10,8 @@ const HUDControllerRef := preload("res://scripts/game/hud_controller.gd")
 const AudioManagerRef := preload("res://scripts/game/audio_manager.gd")
 const ArenaPropsRef := preload("res://scripts/game/arena_props.gd")
 const SettingsManagerRef := preload("res://scripts/game/settings_manager.gd")
+const WeaponVFXRef := preload("res://scripts/game/weapon_vfx.gd")
+const DestructionVFXRef := preload("res://scripts/game/droid_destruction_vfx.gd")
 
 @export var droid_small_scene: PackedScene
 @export var droid_tall_scene: PackedScene
@@ -25,6 +27,7 @@ var _audio: AudioManagerRef
 var _arena_props: ArenaPropsRef
 var _capture_mouse: bool = true
 var _bootstrapped: bool = false
+var _ripple_accum: float = 0.0
 
 
 func _ready() -> void:
@@ -56,7 +59,7 @@ func _process(delta: float) -> void:
 	if _ship != null and game_manager != null:
 		var yaw_deg := float(game_manager.balance_db.get_arena_cfg().get("ship_orbit_yaw_deg_per_sec", 2.5))
 		_ship.rotate_y(deg_to_rad(yaw_deg) * delta)
-	_update_dynamic_water_ripples()
+	_update_dynamic_water_ripples(delta)
 
 
 func _bind_scene_nodes() -> void:
@@ -65,6 +68,11 @@ func _bind_scene_nodes() -> void:
 	wave_spawner = get_node("WaveSpawner") as WaveSpawnerRef
 	hud = get_node("HUD") as HUDControllerRef
 	_ship = get_node_or_null("SM_Ship") as Node3D
+	if _ship != null:
+		for m in _ship.find_children("*", "MeshInstance3D", true, false):
+			(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	WeaponVFXRef.warmup(self)
+	DestructionVFXRef.warmup(self)
 
 	var water := get_node_or_null("WaterPlane") as MeshInstance3D
 	if water != null and water.get_active_material(0) is ShaderMaterial:
@@ -177,28 +185,19 @@ func _setup_audio_and_props() -> void:
 
 
 func _on_weapon_shot(weapon_id: String) -> void:
-	if _audio != null:
-		_audio.play_weapon_shot(weapon_id)
+	if _audio != null: _audio.play_weapon_shot(weapon_id)
 
+func _on_player_hit(_c: bool, _k: bool) -> void:
+	if _audio != null: _audio.play_sfx("droid_hit", 0.12, -5.0)
 
-func _on_player_hit(_is_crit: bool, _is_kill: bool) -> void:
-	if _audio != null:
-		_audio.play_sfx("droid_hit", 0.12, -5.0)
+func _on_player_hurt(_a: float, _kb: Vector3) -> void:
+	if _audio != null: _audio.play_sfx("player_hurt")
 
+func _on_upgrade_modal_opened(_c: Array) -> void:
+	if _audio != null: _audio.play_sfx("level_up", 0.02, -2.0)
 
-func _on_player_hurt(_amount: float, _kb: Vector3) -> void:
-	if _audio != null:
-		_audio.play_sfx("player_hurt")
-
-
-func _on_upgrade_modal_opened(_choices: Array) -> void:
-	if _audio != null:
-		_audio.play_sfx("level_up", 0.02, -2.0)
-
-
-func _on_barrel_exploded(_pos: Vector3, _rad: float) -> void:
-	if _audio != null:
-		_audio.play_sfx("barrel_explode", 0.08, -1.0)
+func _on_barrel_exploded(_p: Vector3, _r: float) -> void:
+	if _audio != null: _audio.play_sfx("barrel_explode", 0.08, -1.0)
 
 
 func _on_crate_spawned(crate: Node3D) -> void:
@@ -232,11 +231,15 @@ func _on_water_ripple(world_pos: Vector3, _strength: float) -> void:
 	_water_mat.set_shader_parameter("ripple_center_0", Vector2(world_pos.x, world_pos.z))
 
 
-func _update_dynamic_water_ripples() -> void:
+func _update_dynamic_water_ripples(delta: float) -> void:
 	if _water_mat == null or player == null or not is_inside_tree():
 		return
 	var p := player.global_position
 	_water_mat.set_shader_parameter("ripple_center_0", Vector2(p.x, p.z))
+	_ripple_accum += delta
+	if _ripple_accum < 0.08:
+		return
+	_ripple_accum = 0.0
 	var enemies := get_tree().get_nodes_in_group("enemies")
 	var nearest: Array[Dictionary] = []
 	for e in enemies:
@@ -277,22 +280,11 @@ func _on_return_to_menu() -> void:
 
 
 func _ensure_minimal_arena_nodes() -> void:
-	if get_node_or_null("GameManager") == null:
-		var gm := GameManagerRef.new()
-		gm.name = "GameManager"
-		add_child(gm)
-	if get_node_or_null("Player") == null:
-		var p := PlayerControllerRef.new()
-		p.name = "Player"
-		add_child(p)
-	if get_node_or_null("WaveSpawner") == null:
-		var ws := WaveSpawnerRef.new()
-		ws.name = "WaveSpawner"
-		add_child(ws)
-	if get_node_or_null("HUD") == null:
-		var h := HUDControllerRef.new()
-		h.name = "HUD"
-		add_child(h)
+	for spec in [["GameManager", GameManagerRef], ["Player", PlayerControllerRef], ["WaveSpawner", WaveSpawnerRef], ["HUD", HUDControllerRef]]:
+		if get_node_or_null(str(spec[0])) == null:
+			var n: Node = (spec[1] as GDScript).new()
+			n.name = str(spec[0])
+			add_child(n)
 	if get_node_or_null("Entities") == null:
 		var ent := Node3D.new()
 		ent.name = "Entities"

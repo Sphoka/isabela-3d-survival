@@ -140,6 +140,7 @@ func _build_video_tab() -> void:
 	var box := _make_tab_page("VÍDEO")
 	_add_checkbox(box, "fullscreen", "Tela Cheia (Fullscreen)")
 	_add_checkbox(box, "vsync", "Sincronização Vertical (V-Sync)")
+	_add_option_selector(box, "graphics_quality", "Qualidade Gráfica", ["Baixo", "Médio", "Alto"])
 	_add_slider(box, "fov", "Campo de Visão (FOV)", 60.0, 95.0, 1.0, false, "°")
 
 
@@ -209,6 +210,27 @@ func _add_checkbox(parent: VBoxContainer, key: String, label_txt: String) -> voi
 	)
 
 
+func _add_option_selector(parent: VBoxContainer, key: String, label_txt: String, items: Array[String]) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	parent.add_child(row)
+	var lbl := Label.new()
+	lbl.text = label_txt
+	lbl.custom_minimum_size = Vector2(230, 0)
+	row.add_child(lbl)
+	var opt := OptionButton.new()
+	opt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	opt.focus_mode = Control.FOCUS_ALL
+	for idx in range(items.size()):
+		opt.add_item(items[idx], idx)
+	row.add_child(opt)
+	_controls_by_key[key] = opt
+	opt.item_selected.connect(func(idx: int) -> void:
+		SettingsManagerRef.set_val(key, idx, false)
+		SettingsManagerRef.apply_all(get_tree() if is_inside_tree() else null)
+	)
+
+
 func _sync_ui_from_settings() -> void:
 	var data := SettingsManagerRef.get_all()
 	for k in _controls_by_key.keys():
@@ -219,6 +241,8 @@ func _sync_ui_from_settings() -> void:
 			_update_slider_label(k, val)
 		elif ctrl is CheckBox:
 			(ctrl as CheckBox).set_pressed_no_signal(bool(data.get(k, false)))
+		elif ctrl is OptionButton:
+			(ctrl as OptionButton).select(clampi(int(data.get(k, 2)), 0, (ctrl as OptionButton).item_count - 1))
 
 
 func _update_slider_label(key: String, val: float) -> void:

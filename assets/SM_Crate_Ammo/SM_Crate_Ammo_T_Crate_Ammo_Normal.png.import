@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bmkk2wqm5vatl"
-path="res://.godot/imported/SM_Crate_Ammo_T_Crate_Ammo_Normal.png-56524a4f9c8480348370091b4d11da6c.ctex"
+path.s3tc="res://.godot/imported/SM_Crate_Ammo_T_Crate_Ammo_Normal.png-56524a4f9c8480348370091b4d11da6c.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "d23786ebe50dc00ae331d1e09d5bd65d"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/SM_Crate_Ammo/SM_Crate_Ammo_T_Crate_Ammo_Normal.png"
-dest_files=["res://.godot/imported/SM_Crate_Ammo_T_Crate_Ammo_Normal.png-56524a4f9c8480348370091b4d11da6c.ctex"]
+dest_files=["res://.godot/imported/SM_Crate_Ammo_T_Crate_Ammo_Normal.png-56524a4f9c8480348370091b4d11da6c.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +40,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=1024
 detect_3d/compress_to=1

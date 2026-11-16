@@ -106,6 +106,7 @@ func _build_comms_pylons() -> void:
 		beacon.mesh = bmesh
 		beacon.position = Vector3(0.0, 4.65, 0.0)
 		beacon.material_override = _make_emissive_mat(col, 2.6)
+		beacon.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		body.add_child(beacon)
 
 		var light := OmniLight3D.new()
@@ -134,6 +135,8 @@ func _build_wreckage_details() -> void:
 		if inst != null:
 			inst.position = item["pos"]
 			inst.rotation_degrees = item["rot"]
+			for m in inst.find_children("*", "MeshInstance3D", true, false):
+				(m as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			add_child(inst)
 
 
@@ -184,6 +187,7 @@ func _add_static_block(pos: Vector3, yaw_deg: float, size: Vector3, hull_mat: St
 	strip.mesh = sm
 	strip.position = Vector3(0.0, size.y * 0.78, 0.0)
 	strip.material_override = trim_mat
+	strip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	sb.add_child(strip)
 
 	var footprint_r := Vector2(size.x * 0.5, size.z * 0.5).length() + 0.35

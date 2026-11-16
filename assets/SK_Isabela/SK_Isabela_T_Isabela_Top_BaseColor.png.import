@@ -3,9 +3,10 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://y2quu0hv5s37"
-path="res://.godot/imported/SK_Isabela_T_Isabela_Top_BaseColor.png-abf537c9b595aee614aeadb7adb7f0c2.ctex"
+path.s3tc="res://.godot/imported/SK_Isabela_T_Isabela_Top_BaseColor.png-abf537c9b595aee614aeadb7adb7f0c2.s3tc.ctex"
 metadata={
-"vram_texture": false
+"imported_formats": ["s3tc_bptc"],
+"vram_texture": true
 }
 generator_parameters={
 "md5": "6634d78b15bbaac3135948527c1711d0"
@@ -14,11 +15,11 @@ generator_parameters={
 [deps]
 
 source_file="res://assets/SK_Isabela/SK_Isabela_T_Isabela_Top_BaseColor.png"
-dest_files=["res://.godot/imported/SK_Isabela_T_Isabela_Top_BaseColor.png-abf537c9b595aee614aeadb7adb7f0c2.ctex"]
+dest_files=["res://.godot/imported/SK_Isabela_T_Isabela_Top_BaseColor.png-abf537c9b595aee614aeadb7adb7f0c2.s3tc.ctex"]
 
 [params]
 
-compress/mode=0
+compress/mode=2
 compress/high_quality=false
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -39,5 +40,5 @@ process/premult_alpha=false
 process/normal_map_invert_y=false
 process/hdr_as_srgb=false
 process/hdr_clamp_exposure=false
-process/size_limit=0
+process/size_limit=2048
 detect_3d/compress_to=1
