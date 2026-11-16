@@ -1,5 +1,11 @@
 # CHANGELOG — Projeto Isabela 3D
 
+## [2026-11-16 13:02] Design Completo da Trilha 3 (Bosses Rotativos, Desbloqueio de Skins & Arquétipos Buff/Debuff)
+- **Backups criados**: `D:\Godot\isabela_scene_test\.backups\TRILHA_3_PLAN.md.20261116_*.bak`, `CHANGELOG.md.20261116_*.bak`.
+- **Atualizado [`docs/TRILHA_3_PLAN.md`](file:///D:/Godot/isabela_scene_test/docs/TRILHA_3_PLAN.md)**:
+  - Consolidados os **3 Bosses Rotativos** (Onda 5 `Valkyrie Skull`, Onda 10 `White Reaper`, Onda 15 `Anubis Phantom`), armas exclusivas, animações/ações únicas, anti-cheese em plataformas elevatórias, **Chuva de Cápsulas (`orbital_drop_pod.gd`)**, **2 Fases + Enrage aos 50% HP** e recompensa (`Lendária` + 1 Vida + 1 Munição + desbloqueio da skin).
+  - Detalhado o sistema de **Skins Desbloqueáveis & Arquétipos (`player_skin_helper.gd`)** com tabela exata de **Buffs e Debuffs de equilíbrio** (`Assalto Ágil`, `Tanque Blindado`, `Caçador de Precisão`), persistência `user://unlocks.cfg` e plano de testes TDD (`test_trilha_3_boss_skins_radar.gd`).
+
 ## [2026-11-16 12:50] Referências T-Pose do Boss (`docs/references/`) & Brainstorm Pilar 3.1
 - **Backups criados**: `D:\Godot\isabela_scene_test\.backups\TRILHA_3_PLAN.md.20261116_*.bak`, `CHANGELOG.md.20261116_*.bak`.
 - **Adicionadas referências em T-Pose (fundo branco, mãos abertas 5 dedos)** em `docs/references/` (com `.gdignore` para não inflar importação do Godot):
