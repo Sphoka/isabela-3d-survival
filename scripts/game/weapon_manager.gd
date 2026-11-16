@@ -77,11 +77,6 @@ func refresh_equipped_mesh() -> void:
 		_active_visual.rotation_degrees = Vector3(float(grot[0]), float(grot[1]), float(grot[2]))
 	_apply_tps_weapon_shadow_mode()
 	_muzzle_node = _active_visual.get_node_or_null("Muzzle") as Node3D
-	if str(def.get("id", "")) == "lightsaber":
-		var blade := _active_visual.find_child("SM_Weapon_Lightsaber_Blade", true, false) as Node3D
-		if blade != null:
-			blade.scale.y = 0.05
-			blade.create_tween().tween_property(blade, "scale:y", 1.0, 0.16)
 
 
 func execute_shot(shot: Dictionary, aim_data: Dictionary) -> void:
@@ -107,7 +102,8 @@ func execute_shot(shot: Dictionary, aim_data: Dictionary) -> void:
 			WeaponVFXRef.spawn_muzzle_flash(scene_root, muzzle_pos, Color(1.0, 0.65, 0.25))
 		"hitscan_pierce":
 			_fire_piercing_laser(ray_origin, muzzle_pos, apply_spread(base_dir, float(shot.get("spread_deg", 0.15))), shot)
-			WeaponVFXRef.spawn_muzzle_flash(scene_root, muzzle_pos, Color(0.20, 0.95, 1.0))
+			var flash_col := Color(1.0, 0.85, 0.45) if str(shot.get("id", "")) == "sniper" else Color(0.20, 0.95, 1.0)
+			WeaponVFXRef.spawn_muzzle_flash(scene_root, muzzle_pos, flash_col)
 		"projectile_explosive":
 			var rocket_origin := ray_origin + base_dir * 0.55
 			_spawn_rocket(rocket_origin, apply_spread(base_dir, float(shot.get("spread_deg", 0.4))), shot)
@@ -194,7 +190,9 @@ func _fire_piercing_laser(origin: Vector3, beam_start: Vector3, dir: Vector3, sh
 		excluded.append((hit["collider"] as CollisionObject3D).get_rid())
 		cur_start = end_pos + dir * 0.05
 		pierce_left -= 1
-	WeaponVFXRef.spawn_beam_fx(get_tree().current_scene, beam_start, end_pos, Color(0.15, 0.90, 1.0), 0.06, 0.10)
+	var is_sniper := str(shot.get("id", "")) == "sniper"
+	var beam_col := Color(1.0, 0.88, 0.55) if is_sniper else Color(0.15, 0.90, 1.0)
+	WeaponVFXRef.spawn_beam_fx(get_tree().current_scene, beam_start, end_pos, beam_col, 0.028 if is_sniper else 0.06, 0.16 if is_sniper else 0.10)
 
 
 func _apply_ray_hit(hit: Dictionary, origin: Vector3, dir: Vector3, shot: Dictionary, use_falloff: bool) -> bool:
@@ -202,15 +200,17 @@ func _apply_ray_hit(hit: Dictionary, origin: Vector3, dir: Vector3, shot: Dictio
 	var col: Variant = hit.get("collider", null)
 	var dmg_target := _is_damageable(col)
 	var is_enemy := col is Node and (col as Node).is_in_group("enemies")
+	var is_hs := false
 	if dmg_target:
 		var dmg := _apply_distance_falloff(float(shot["final_damage"]), origin.distance_to(hp), shot) if use_falloff else float(shot["final_damage"])
 		if is_enemy and "headshot_y_threshold" in col and (hp.y - (col as Node3D).global_position.y > float(col.get("headshot_y_threshold"))):
 			dmg *= float(shot.get("headshot_multiplier", 1.0))
+			is_hs = true
 		var will_kill: bool = is_enemy and ("current_hp" in col) and float(col.get("current_hp")) <= dmg
-		col.call("take_damage", dmg, dir * float(shot.get("knockback_mps", 2.0)), bool(shot.get("is_crit", false)), str(shot.get("id", "")))
+		col.call("take_damage", dmg, dir * float(shot.get("knockback_mps", 2.0)), bool(shot.get("is_crit", false)) or is_hs, str(shot.get("id", "")))
 		if is_enemy:
-			shot_hit.emit(bool(shot.get("is_crit", false)), will_kill)
-	WeaponVFXRef.spawn_hit_sparks(get_tree().current_scene, hp, hit.get("normal", Vector3.UP), bool(shot.get("is_crit", false)) and is_enemy, dmg_target)
+			shot_hit.emit(bool(shot.get("is_crit", false)) or is_hs, will_kill)
+	WeaponVFXRef.spawn_hit_sparks(get_tree().current_scene, hp, hit.get("normal", Vector3.UP), (bool(shot.get("is_crit", false)) or is_hs) and is_enemy, dmg_target)
 	return is_enemy
 
 

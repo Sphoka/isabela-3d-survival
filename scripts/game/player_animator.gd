@@ -85,21 +85,17 @@ func _setup_animation_tree() -> void:
 func has_animation_clip(clip_name: String) -> bool:
 	return _clips.has(clip_name)
 
-
 func get_skeleton() -> Skeleton3D:
 	return _skeleton
 
-
 func get_weapon_socket() -> Node3D:
 	return _weapon_socket
-
 
 func set_first_person_shadow_only(enabled: bool) -> void:
 	var mode := GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY if enabled else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	for m in _meshes:
 		if is_instance_valid(m):
 			m.cast_shadow = mode
-
 
 func trigger_wince() -> void:
 	_wince_left = 0.28
@@ -113,7 +109,7 @@ func trigger_fire_expression() -> void:
 func trigger_shoot(weapon_id: String) -> void:
 	trigger_fire_expression()
 	var act := "pistol_shoot"
-	if weapon_id in ["shotgun", "laser_gun", "smg"]:
+	if weapon_id in ["shotgun", "laser_gun", "smg", "sniper"]:
 		act = "rifle_shoot"
 	elif weapon_id == "rocket_launcher":
 		act = "rocket_shoot"
@@ -122,7 +118,7 @@ func trigger_shoot(weapon_id: String) -> void:
 
 func trigger_reload(weapon_id: String) -> void:
 	var act := "pistol_reload"
-	if weapon_id in ["shotgun", "laser_gun", "smg"]:
+	if weapon_id in ["shotgun", "laser_gun", "smg", "sniper"]:
 		act = "rifle_reload"
 	elif weapon_id == "rocket_launcher":
 		act = "rocket_reload"
@@ -184,7 +180,7 @@ func _apply_anim_tree_pose(delta: float, velocity: Vector3, on_floor: bool, is_d
 
 	var uidle := "pistol"
 	var grip := "right"
-	if weapon_id in ["shotgun", "laser_gun", "smg"]:
+	if weapon_id in ["shotgun", "laser_gun", "smg", "sniper"]:
 		uidle = "rifle"
 		grip = "both"
 	elif weapon_id == "rocket_launcher":
@@ -202,6 +198,10 @@ func _apply_anim_tree_pose(delta: float, velocity: Vector3, on_floor: bool, is_d
 	_anim_tree.set("parameters/UpperBlend/blend_amount", upper_blend)
 	_anim_tree.set("parameters/GripBlend/blend_amount", 0.85 if upper_blend > 0.5 else 0.0)
 	_anim_tree.advance(delta)
+	if uidle == "sword" and upper_blend > 0.5:
+		_set_char_rot("LeftShoulder", Vector3.ZERO)
+		_set_char_rot("LeftUpperArm", Vector3(-0.18, 0.12, -0.58))
+		_set_char_rot("LeftLowerArm", Vector3(-0.38, -0.15, 0.0))
 
 	if not _is_dead and not is_dashing:
 		var move_fac := clampf(h_speed / 5.8, 0.0, 1.0)

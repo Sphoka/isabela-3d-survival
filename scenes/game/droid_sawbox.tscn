@@ -1,0 +1,167 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/game/enemy_droid.gd" id="1_enemy_droid"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_sawbox"]
+radius = 0.64
+height = 1.65
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hull"]
+albedo_color = Color(0.22, 0.24, 0.28, 1)
+metallic = 0.85
+roughness = 0.34
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hazard"]
+albedo_color = Color(0.92, 0.64, 0.1, 1)
+metallic = 0.45
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_visor"]
+albedo_color = Color(1, 0.18, 0.12, 1)
+roughness = 0.2
+emission_enabled = true
+emission = Color(1, 0.22, 0.1, 1)
+emission_energy_multiplier = 2.4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_saw_blade"]
+albedo_color = Color(0.84, 0.88, 0.94, 1)
+metallic = 0.95
+roughness = 0.18
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hp"]
+shading_mode = 0
+albedo_color = Color(0.95, 0.2, 0.2, 1)
+billboard_mode = 1
+
+[sub_resource type="BoxMesh" id="BoxMesh_cube"]
+material = SubResource("StandardMaterial3D_hull")
+size = Vector3(0.96, 1.06, 0.96)
+
+[sub_resource type="BoxMesh" id="BoxMesh_top"]
+material = SubResource("StandardMaterial3D_hazard")
+size = Vector3(0.82, 0.14, 0.82)
+
+[sub_resource type="BoxMesh" id="BoxMesh_visor"]
+material = SubResource("StandardMaterial3D_visor")
+size = Vector3(0.64, 0.13, 0.08)
+
+[sub_resource type="BoxMesh" id="BoxMesh_grille"]
+material = SubResource("StandardMaterial3D_hazard")
+size = Vector3(0.76, 0.34, 0.1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tread"]
+material = SubResource("StandardMaterial3D_hull")
+size = Vector3(0.22, 0.3, 1.06)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_saw_disc"]
+material = SubResource("StandardMaterial3D_saw_blade")
+top_radius = 0.52
+bottom_radius = 0.52
+height = 0.045
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_saw_hub"]
+material = SubResource("StandardMaterial3D_visor")
+top_radius = 0.16
+bottom_radius = 0.16
+height = 0.12
+
+[sub_resource type="BoxMesh" id="BoxMesh_saw_teeth"]
+material = SubResource("StandardMaterial3D_saw_blade")
+size = Vector3(0.03, 1.18, 0.14)
+
+[sub_resource type="QuadMesh" id="QuadMesh_hp"]
+material = SubResource("StandardMaterial3D_hp")
+size = Vector2(1.25, 0.11)
+
+[node name="DroidSawboxEnemy" type="CharacterBody3D"]
+collision_layer = 4
+collision_mask = 23
+script = ExtResource("1_enemy_droid")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.825, 0)
+shape = SubResource("CapsuleShape3D_sawbox")
+
+[node name="VisualRoot" type="Node3D" parent="."]
+
+[node name="ArmoredCube" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.86, 0)
+mesh = SubResource("BoxMesh_cube")
+
+[node name="TopBumper" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.44, 0)
+mesh = SubResource("BoxMesh_top")
+
+[node name="FrontVisor" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.06, 0.49)
+mesh = SubResource("BoxMesh_visor")
+
+[node name="FrontGrille" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.62, 0.49)
+mesh = SubResource("BoxMesh_grille")
+
+[node name="TreadL" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.42, 0.18, 0)
+mesh = SubResource("BoxMesh_tread")
+
+[node name="TreadR" type="MeshInstance3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.42, 0.18, 0)
+mesh = SubResource("BoxMesh_tread")
+
+[node name="SawPivotL" type="Node3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0.84, 0.08)
+
+[node name="SawDiscL" type="MeshInstance3D" parent="VisualRoot/SawPivotL"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("CylinderMesh_saw_disc")
+
+[node name="SawHubL" type="MeshInstance3D" parent="VisualRoot/SawPivotL"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("CylinderMesh_saw_hub")
+
+[node name="SawTeethA" type="MeshInstance3D" parent="VisualRoot/SawPivotL"]
+mesh = SubResource("BoxMesh_saw_teeth")
+
+[node name="SawTeethB" type="MeshInstance3D" parent="VisualRoot/SawPivotL"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0)
+mesh = SubResource("BoxMesh_saw_teeth")
+
+[node name="SawTeethC" type="MeshInstance3D" parent="VisualRoot/SawPivotL"]
+transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0, 0, 0)
+mesh = SubResource("BoxMesh_saw_teeth")
+
+[node name="SawTeethD" type="MeshInstance3D" parent="VisualRoot/SawPivotL"]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 0, 0)
+mesh = SubResource("BoxMesh_saw_teeth")
+
+[node name="SawPivotR" type="Node3D" parent="VisualRoot"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.6, 0.84, 0.08)
+
+[node name="SawDiscR" type="MeshInstance3D" parent="VisualRoot/SawPivotR"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("CylinderMesh_saw_disc")
+
+[node name="SawHubR" type="MeshInstance3D" parent="VisualRoot/SawPivotR"]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0)
+mesh = SubResource("CylinderMesh_saw_hub")
+
+[node name="SawTeethA" type="MeshInstance3D" parent="VisualRoot/SawPivotR"]
+mesh = SubResource("BoxMesh_saw_teeth")
+
+[node name="SawTeethB" type="MeshInstance3D" parent="VisualRoot/SawPivotR"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, 0)
+mesh = SubResource("BoxMesh_saw_teeth")
+
+[node name="SawTeethC" type="MeshInstance3D" parent="VisualRoot/SawPivotR"]
+transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0, 0, 0)
+mesh = SubResource("BoxMesh_saw_teeth")
+
+[node name="SawTeethD" type="MeshInstance3D" parent="VisualRoot/SawPivotR"]
+transform = Transform3D(1, 0, 0, 0, 0.707107, 0.707107, 0, -0.707107, 0.707107, 0, 0, 0)
+mesh = SubResource("BoxMesh_saw_teeth")
+
+[node name="HPBar" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.85, 0)
+
+[node name="Fill" type="MeshInstance3D" parent="HPBar"]
+mesh = SubResource("QuadMesh_hp")

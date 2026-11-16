@@ -57,16 +57,32 @@ static func make_punk_loop() -> AudioStreamWAV:
 static func make_sfx(sfx_id: String) -> AudioStreamWAV:
 	var dur := 0.18
 	match sfx_id:
-		"shotgun", "rocket_launcher":
+		"shotgun", "rocket_launcher", "sniper":
 			dur = 0.34
-		"droid_explode", "barrel_explode":
+		"rocket_explode":
+			dur = 0.58
+		"droid_explode", "barrel_explode", "enemy_death":
 			dur = 0.55
 		"level_up", "wave_start":
 			dur = 0.42
-		"laser_gun", "lightsaber":
+		"laser_gun", "lightsaber", "droid_tall":
 			dur = 0.24
-		"droid_hit", "smg":
+		"laser_overheat":
+			dur = 0.48
+		"electric_shock":
+			dur = 0.32
+		"droid_sawbox_hum":
+			dur = 0.36
+		"droid_sawbox_impact":
+			dur = 0.26
+		"droid_spider_cannon":
+			dur = 0.22
+		"droid_small":
+			dur = 0.16
+		"droid_hit", "enemy_hit", "smg":
 			dur = 0.10
+		"droid_spider_step":
+			dur = 0.09
 		"reload":
 			dur = 0.22
 		"upgrade_appear":
@@ -99,6 +115,10 @@ static func _sample_sfx(id: String, t: float, u: float, rng: RandomNumberGenerat
 			return (rng.randf_range(-1.0, 1.0) * 0.72 + sin(TAU * lerpf(680.0, 140.0, u) * t) * 0.35) * exp(-u * 13.0)
 		"shotgun":
 			return (rng.randf_range(-1.0, 1.0) * 0.75 + sin(TAU * lerpf(240.0, 48.0, u) * t) * 0.65) * exp(-u * 6.5)
+		"sniper":
+			var crack := rng.randf_range(-1.0, 1.0) * 0.85 * exp(-u * 14.0)
+			var boom := sin(TAU * lerpf(320.0, 42.0, pow(u, 0.35)) * t) * 0.72 * exp(-u * 5.2)
+			return crack + boom
 		"laser_gun":
 			var f := lerpf(1650.0, 290.0, pow(u, 0.55))
 			return (sin(TAU * f * t) * 0.55 + (2.0 * fmod(t * f, 1.0) - 1.0) * 0.35) * exp(-u * 5.0)
@@ -145,4 +165,52 @@ static func _sample_sfx(id: String, t: float, u: float, rng: RandomNumberGenerat
 			var ring := sin(TAU * 2450.0 * t) * 0.45 + sin(TAU * 3880.0 * t) * 0.30 + sin(TAU * 5240.0 * t) * 0.18
 			var snap := rng.randf_range(-1.0, 1.0) * 0.35 * exp(-u * 42.0)
 			return (ring * exp(-u * 26.0) + snap) * 0.75
+		"rocket_explode":
+			var r_sub := sin(TAU * lerpf(115.0, 24.0, pow(u, 0.32)) * t) * 0.85
+			var r_punch := sin(TAU * lerpf(220.0, 55.0, u) * t) * 0.45 * exp(-u * 9.0)
+			var r_shrap := rng.randf_range(-1.0, 1.0) * 0.70 * exp(-u * 3.6)
+			return r_sub * exp(-u * 3.0) + r_punch + r_shrap
+		"laser_overheat":
+			var whine := sin(TAU * lerpf(1400.0, 260.0, pow(u, 0.65)) * t) * 0.45 * exp(-u * 4.5)
+			var vent := rng.randf_range(-1.0, 1.0) * 0.65 * sin(u * PI) * exp(-maxf(0.0, u - 0.3) * 3.5)
+			return whine + vent
+		"electric_shock":
+			var buzz := (2.0 * fmod(t * 120.0, 1.0) - 1.0) * 0.42 + (2.0 * fmod(t * 240.0, 1.0) - 1.0) * 0.28
+			var arc := rng.randf_range(-1.0, 1.0) * (0.75 if absf(sin(TAU * 47.0 * t)) > 0.65 else 0.18)
+			var zap := sin(TAU * lerpf(2800.0, 420.0, minf(1.0, u * 4.0)) * t) * 0.45 * exp(-u * 14.0)
+			return (buzz * sin(u * PI) + arc * exp(-u * 2.5) + zap) * 0.85
+		"droid_small":
+			var chirp := sin(TAU * lerpf(920.0, 1380.0, u) * t) * 0.48
+			var mod_s := 0.55 + 0.45 * sin(TAU * 42.0 * t)
+			return (chirp * mod_s + rng.randf_range(-1.0, 1.0) * 0.15 * exp(-u * 18.0)) * exp(-u * 7.5)
+		"droid_tall":
+			var growl := (2.0 * fmod(t * lerpf(185.0, 110.0, u), 1.0) - 1.0) * 0.45
+			var res := sin(TAU * 540.0 * t) * 0.25 * exp(-u * 8.0)
+			return (growl + res) * sin(u * PI) * 0.85
+		"droid_spider_cannon":
+			var thump := sin(TAU * lerpf(320.0, 85.0, pow(u, 0.45)) * t) * 0.60 * exp(-u * 8.0)
+			var p_f := lerpf(1350.0, 380.0, u)
+			var plasma := (2.0 * fmod(t * p_f, 1.0) - 1.0) * 0.42 * exp(-u * 5.5)
+			return thump + plasma
+		"droid_spider_step":
+			var clack := (sin(TAU * 1850.0 * t) * 0.45 + sin(TAU * 3100.0 * t) * 0.30) * exp(-u * 24.0)
+			var tap := rng.randf_range(-1.0, 1.0) * 0.40 * exp(-u * 28.0)
+			return clack + tap
+		"droid_sawbox_hum":
+			var saw_f := 145.0
+			var teeth := 0.65 + 0.35 * sin(TAU * 28.0 * t)
+			var blade := ((2.0 * fmod(t * saw_f, 1.0) - 1.0) * 0.45 + (2.0 * fmod(t * saw_f * 2.0, 1.0) - 1.0) * 0.28) * teeth
+			var air := rng.randf_range(-1.0, 1.0) * 0.18
+			return (blade + air) * sin(u * PI) * 0.85
+		"droid_sawbox_impact":
+			var grind := (sin(TAU * 780.0 * t) * 0.35 + sin(TAU * 1210.0 * t) * 0.30 + sin(TAU * 2150.0 * t) * 0.22) * exp(-u * 6.5)
+			var sparks := rng.randf_range(-1.0, 1.0) * 0.65 * exp(-u * 7.5)
+			return grind + sparks
+		"enemy_hit":
+			return (sin(TAU * lerpf(1280.0, 520.0, u) * t) * 0.55 + rng.randf_range(-1.0, 1.0) * 0.45) * exp(-u * 15.0)
+		"enemy_death":
+			var pdown := sin(TAU * lerpf(620.0, 55.0, pow(u, 0.6)) * t) * 0.45 * exp(-u * 3.5)
+			var e_boom := sin(TAU * lerpf(150.0, 30.0, pow(u, 0.4)) * t) * 0.70 * exp(-u * 3.8)
+			var debris := rng.randf_range(-1.0, 1.0) * 0.55 * exp(-u * 4.5)
+			return pdown + e_boom + debris
 	return sin(TAU * 440.0 * t) * exp(-u * 8.0) * 0.4

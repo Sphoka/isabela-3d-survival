@@ -124,18 +124,13 @@ func _run_e2e() -> void:
 	if not _check(pistol_res_after > pistol_res_before, "Ammo crate must refill Pistol reserve ammo (before=%s after=%s a_valid=%s a_col=%s cfg=%s same_loadout=%s)" % [pistol_res_before, pistol_res_after, is_instance_valid(a_crate), a_crate._collected if is_instance_valid(a_crate) else true, gm.balance_db.get_pickup("ammo_crate").keys(), player._loadout == gm.loadout]):
 		return
 
-	# 2. Lightsaber deflection of enemy plasma bolt
+	# 2. Sniper Rifle slot 2 equip & fire
 	gm.loadout.select_slot(2)
 	wm.refresh_equipped_mesh()
-	var bolt := ProjectileRef.new()
-	bolt.add_to_group("enemy_projectiles")
-	entities.add_child(bolt)
-	bolt.configure_enemy_plasma(player.global_position + Vector3(0, 1.0, -1.6), Vector3.BACK, 18.0, 16.0)
-	var saber_shot: Dictionary = gm.loadout.try_fire(false)
-	wm.execute_shot(saber_shot, {"origin": player.global_position + Vector3(0, 1.3, 0), "target": player.global_position + Vector3(0, 1.0, -10.0), "forward": Vector3.FORWARD})
-	if not _check(bolt.is_friendly_to_player(), "Lightsaber swing must deflect enemy plasma bolt"):
+	var sniper_shot: Dictionary = gm.loadout.try_fire(true)
+	wm.execute_shot(sniper_shot, {"origin": player.global_position + Vector3(0, 1.3, 0), "target": player.global_position + Vector3(0, 1.0, -25.0), "forward": Vector3.FORWARD})
+	if not _check(sniper_shot.get("fired", false) and str(sniper_shot.get("id", "")) == "sniper", "Slot 2 Sniper must equip and fire"):
 		return
-	bolt.queue_free()
 
 	# 3. LaserGun piercing ray across two lined-up droids
 	var tall_dummy := droid_tall_ps.instantiate() as CharacterBody3D

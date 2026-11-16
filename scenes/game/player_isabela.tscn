@@ -1,7 +1,7 @@
 [gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/game/player_controller.gd" id="1_player_ctrl"]
-[ext_resource type="PackedScene" uid="uid://bhvtrcn8df0cy" path="res://assets/SK_Isabela/SK_Isabela.glb" id="2_isabela"]
+[ext_resource type="PackedScene" uid="uid://dp6c41kmxdxj1" path="res://assets/SK_Isabela/SK_Isabela_Leeloo.glb" id="2_isabela"]
 [ext_resource type="Script" path="res://scripts/game/player_camera_rig.gd" id="3_cam_rig"]
 [ext_resource type="Script" path="res://scripts/game/player_animator.gd" id="4_animator"]
 [ext_resource type="Script" path="res://scripts/game/weapon_manager.gd" id="5_weapon_mgr"]

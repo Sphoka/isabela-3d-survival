@@ -3,9 +3,11 @@ extends Node3D
 ## First-person arms + weapon viewmodel attached to Camera3D with sway, bob, ADS alignment, recoil, reload, and melee slashes.
 
 const FPS_ARMS_PATH := "res://assets/SK_Isabela/FPS_Arms.glb"
+const FPSOpticHelperRef := preload("res://scripts/game/fps_optic_helper.gd")
 
 const WEAPON_TWEAKS := {
 	"pistol": {"pos": Vector3(0.07, -0.06, -0.02), "ads_pos": Vector3(-0.0917, -0.015, 0.03), "rot": Vector3(0.0, 0.025, 0.0), "ads_rot": Vector3.ZERO, "doom_x": -0.0917, "recoil_z": 0.045, "recoil_pitch": 0.08},
+	"sniper": {"pos": Vector3(0.08, -0.07, -0.05), "ads_pos": Vector3(-0.0917, -0.032, -0.01), "rot": Vector3(0.0, 0.025, 0.0), "ads_rot": Vector3.ZERO, "doom_x": -0.0917, "recoil_z": 0.095, "recoil_pitch": 0.15},
 	"lightsaber": {"pos": Vector3(0.09, -0.09, -0.02), "ads_pos": Vector3(-0.02, -0.07, 0.0), "rot": Vector3(-0.18, 0.14, 0.28), "ads_rot": Vector3(-0.10, 0.05, 0.14), "doom_x": -0.09, "recoil_z": 0.02, "recoil_pitch": 0.04},
 	"shotgun": {"pos": Vector3(0.08, -0.07, -0.05), "ads_pos": Vector3(-0.0917, -0.025, -0.01), "rot": Vector3(0.0, 0.025, 0.0), "ads_rot": Vector3.ZERO, "doom_x": -0.0917, "recoil_z": 0.085, "recoil_pitch": 0.14},
 	"rocket_launcher": {"pos": Vector3(0.11, -0.08, -0.10), "ads_pos": Vector3(-0.04, -0.05, -0.08), "rot": Vector3(0.0, 0.02, 0.0), "ads_rot": Vector3.ZERO, "doom_x": -0.0917, "recoil_z": 0.10, "recoil_pitch": 0.16},
@@ -41,7 +43,7 @@ var _oneshot_left: float = 0.0
 var _overheat_active: bool = false
 var _overheat_phase: float = 0.0
 var _cool_ready_left: float = 0.0
-var _tint_overlay: StandardMaterial3D = null
+var _optic_helper := FPSOpticHelperRef.new()
 
 
 func _ready() -> void:
@@ -64,7 +66,7 @@ func ensure_built() -> void:
 			_arms_instance = ps.instantiate() as Node3D
 			_rig_root.add_child(_arms_instance)
 			_has_arms_asset = true
-			_disable_shadows_recursive(_arms_instance)
+			_optic_helper.disable_shadows_recursive(_arms_instance)
 			_anim_player = _arms_instance.find_child("AnimationPlayer", true, false) as AnimationPlayer
 			if _anim_player != null:
 				for loop_name in ["FPS_Idle", "FPS_Walk"]:
@@ -84,12 +86,14 @@ func ensure_built() -> void:
 func set_active(enabled: bool) -> void:
 	ensure_built()
 	visible = enabled
-	if enabled:
-		_sway_offset = Vector2.ZERO
-		_recoil_z = 0.0
-		_recoil_pitch = 0.0
-		_draw_left = 0.22
-		_play_clip("FPS_Draw", 0.08, true)
+	if not enabled:
+		_optic_helper.set_aiming(false, str(_weapon_def.get("id", "")))
+		return
+	_sway_offset = Vector2.ZERO
+	_recoil_z = 0.0
+	_recoil_pitch = 0.0
+	_draw_left = 0.22
+	_play_clip("FPS_Draw", 0.08, true)
 
 
 func toggle_doom_centered() -> bool:
@@ -119,7 +123,8 @@ func set_weapon(def: Dictionary) -> void:
 		_active_weapon.position = Vector3(float(gpos[0]), float(gpos[1]), float(gpos[2]))
 	if grot.size() >= 3:
 		_active_weapon.rotation_degrees = Vector3(float(grot[0]), float(grot[1]), float(grot[2]))
-	_disable_shadows_recursive(_active_weapon)
+	_optic_helper.disable_shadows_recursive(_active_weapon)
+	_optic_helper.bind_weapon(_active_weapon)
 	_muzzle_node = _active_weapon.get_node_or_null("Muzzle") as Node3D
 	_draw_left = 0.22
 	_overheat_active = false
@@ -214,6 +219,7 @@ func update_viewmodel(delta: float, h_speed: float, max_speed: float, on_floor: 
 	elif is_aiming and not is_reloading and _melee_left <= 0.0:
 		base_pos = tw.get("ads_pos", base_pos)
 		base_rot = tw.get("ads_rot", base_rot)
+	_optic_helper.set_aiming(is_aiming and not is_reloading and _melee_left <= 0.0 and not doom_centered, wid)
 
 	var aim_scale := 0.35 if is_aiming else 1.0
 	var proc_scale := 0.22 if _has_arms_asset else 1.0
@@ -275,23 +281,5 @@ func _play_clip(clip_name: String, blend_s: float, is_oneshot: bool) -> void:
 		_anim_player.play(clip_name, blend_s)
 
 
-func _disable_shadows_recursive(node: Node) -> void:
-	if node is MeshInstance3D:
-		(node as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	for c in node.get_children():
-		_disable_shadows_recursive(c)
-
-
 func _set_weapon_overlay(col: Color) -> void:
-	if _active_weapon == null:
-		return
-	var mat: StandardMaterial3D = null
-	if col.a > 0.001:
-		if _tint_overlay == null:
-			_tint_overlay = StandardMaterial3D.new()
-			_tint_overlay.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-			_tint_overlay.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_tint_overlay.albedo_color = col
-		mat = _tint_overlay
-	for m in _active_weapon.find_children("*", "MeshInstance3D", true, false):
-		(m as MeshInstance3D).material_overlay = mat
+	_optic_helper.set_weapon_overlay(_active_weapon, col)

@@ -167,6 +167,10 @@ func _setup_audio_and_props() -> void:
 		_arena_props.name = "ArenaProps"
 		add_child(_arena_props)
 	_arena_props.build_arena_props()
+	var perim := preload("res://scripts/game/arena_electric_perimeter.gd").new()
+	add_child(perim)
+	perim.setup(game_manager, player, _audio)
+	add_child(preload("res://scripts/game/arena_elevators.gd").new())
 	for barrel in _arena_props.get_barrels():
 		if is_instance_valid(barrel) and not barrel.exploded.is_connected(_on_barrel_exploded):
 			barrel.exploded.connect(_on_barrel_exploded)

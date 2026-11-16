@@ -5,6 +5,7 @@ extends CharacterBody3D
 const BalanceDBRef := preload("res://scripts/game/balance_db.gd")
 const ProjectileRef := preload("res://scripts/game/projectile_controller.gd")
 const DestructionVFXRef := preload("res://scripts/game/droid_destruction_vfx.gd")
+const VariantsHelperRef := preload("res://scripts/game/enemy_variants_helper.gd")
 
 signal died(enemy: Node3D, enemy_id: String, xp_reward: int, score_reward: int, drop_chance: float, world_pos: Vector3)
 signal took_damage(amount: float, is_crit: bool)
@@ -41,7 +42,7 @@ var _arm_bones: Dictionary = {}
 var _arm_rest: Dictionary = {}
 var _meshes: Array[MeshInstance3D] = []
 var _flash_mat: StandardMaterial3D
-
+var _variants := VariantsHelperRef.new()
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -52,6 +53,7 @@ func _ready() -> void:
 	_foot_r = find_child("Target_Foot_R", true, false) as Node3D
 	_setup_arm_bones()
 	_collect_body_meshes()
+	_variants.bind(self)
 
 
 func configure_from_balance(id: String, db: BalanceDBRef, wave_spec: Dictionary, player: Node3D, proj_parent: Node3D = null) -> void:
@@ -103,7 +105,6 @@ func take_damage(amount: float, impulse: Vector3 = Vector3.ZERO, is_crit: bool =
 		died.emit(self, enemy_id, xp_reward, score_reward, crate_drop_chance, global_position)
 		queue_free()
 
-
 func _physics_process(delta: float) -> void:
 	if _dead:
 		return
@@ -141,17 +142,17 @@ func _physics_process(delta: float) -> void:
 
 
 func _choose_move_and_attack(dist: float, dir: Vector3, _delta: float) -> void:
-	var is_tall := enemy_id == "droid_tall"
-	var melee_r := float(_cfg.get("melee_range_m", 2.1) if is_tall else _cfg.get("attack_range_m", 1.55))
+	var has_ranged := enemy_id == "droid_tall" or enemy_id == "droid_spider"
+	var melee_r := float(_cfg.get("melee_range_m", 2.1) if has_ranged else _cfg.get("attack_range_m", 1.55))
 
 	if dist <= melee_r and _cooldown_left <= 0.0:
 		_pending_attack = "melee"
-		_windup_left = float(_cfg.get("melee_windup_s", 0.50) if is_tall else _cfg.get("attack_windup_s", 0.35))
+		_windup_left = float(_cfg.get("melee_windup_s", 0.50) if has_ranged else _cfg.get("attack_windup_s", 0.35))
 		velocity.x = _knockback_vel.x
 		velocity.z = _knockback_vel.z
 		return
 
-	if is_tall and dist <= float(_cfg.get("ranged_max_range_m", 26.0)) and dist > melee_r + 1.0 and _cooldown_left <= 0.0:
+	if has_ranged and dist <= float(_cfg.get("ranged_max_range_m", 26.0)) and dist > melee_r + 1.0 and _cooldown_left <= 0.0:
 		_pending_attack = "ranged"
 		_windup_left = float(_cfg.get("ranged_windup_s", 0.55))
 		velocity.x = _knockback_vel.x
@@ -160,23 +161,26 @@ func _choose_move_and_attack(dist: float, dir: Vector3, _delta: float) -> void:
 
 	var move_dir := _steer_around_obstacles(dir)
 	var desired_speed := move_speed_mps
-	if is_tall and dist <= float(_cfg.get("preferred_range_min_m", 8.0)):
+	if (has_ranged and dist <= float(_cfg.get("preferred_range_min_m", 8.0))) or _variants.should_hold_elevator_ledge(move_dir):
 		desired_speed = 0.0
 	velocity.x = move_dir.x * desired_speed + _knockback_vel.x
 	velocity.z = move_dir.z * desired_speed + _knockback_vel.z
 
 
 func _execute_attack(dist: float, dir: Vector3) -> void:
-	var is_tall := enemy_id == "droid_tall"
+	var has_ranged := enemy_id == "droid_tall" or enemy_id == "droid_spider"
 	if _pending_attack == "melee":
-		_cooldown_left = float(_cfg.get("melee_cooldown_s", 1.60) if is_tall else _cfg.get("attack_cooldown_s", 1.15))
-		var melee_r := float(_cfg.get("melee_range_m", 2.1) if is_tall else _cfg.get("attack_range_m", 1.55)) + 0.45
+		_cooldown_left = float(_cfg.get("melee_cooldown_s", 1.60) if has_ranged else _cfg.get("attack_cooldown_s", 1.15))
+		var melee_r := float(_cfg.get("melee_range_m", 2.1) if has_ranged else _cfg.get("attack_range_m", 1.55)) + 0.45
 		if dist <= melee_r and _player != null and _player.has_method("take_damage"):
-			var dmg := float(_cfg.get("melee_base_damage", 24.0) if is_tall else _cfg.get("base_damage", 12.0)) * _dmg_mult
+			var dmg := float(_cfg.get("melee_base_damage", 24.0) if has_ranged else _cfg.get("base_damage", 12.0)) * _dmg_mult
 			_player.call("take_damage", dmg, dir * 6.0)
 	elif _pending_attack == "ranged":
 		_cooldown_left = float(_cfg.get("ranged_cooldown_s", 2.10))
-		_fire_plasma_bolt()
+		if enemy_id == "droid_spider":
+			_variants.fire_spider_cannon(_player, _cfg, _dmg_mult, _projectiles_parent)
+		else:
+			_fire_plasma_bolt()
 	_pending_attack = ""
 
 
@@ -219,6 +223,7 @@ func _animate_ik_targets(delta: float) -> void:
 		_foot_l.position = Vector3(0.14, maxf(0.04, cos(_stride_phase) * 0.14), s)
 		_foot_r.position = Vector3(-0.14, maxf(0.04, -cos(_stride_phase) * 0.14), -s)
 	_animate_arms(delta, h_spd)
+	_variants.tick(delta, enemy_id, _player, _cfg, _dmg_mult, _projectiles_parent, h_spd, _stride_phase, _windup_left > 0.0)
 
 
 func _setup_arm_bones() -> void:
@@ -256,7 +261,6 @@ func _animate_arms(delta: float, h_spd: float) -> void:
 	_set_arm_rot("fore_l", Vector3(-0.32 - maxf(0.0, -swing) * 0.65, 0.0, 0.0).lerp(Vector3(-0.85 if r else -0.75, 0.0, 0.0), wb))
 	_set_arm_rot("fore_r", Vector3(-0.32 - maxf(0.0, swing) * 0.65, 0.0, 0.0).lerp(Vector3(-0.18 if r else -0.75, 0.0, 0.0), wb))
 
-
 func _ensure_collision_and_bar() -> void:
 	if get_node_or_null("CollisionShape3D") == null:
 		var cs := CollisionShape3D.new()
@@ -268,11 +272,9 @@ func _ensure_collision_and_bar() -> void:
 		add_child(cs)
 	_hp_bar_fill = get_node_or_null("HPBar/Fill") as MeshInstance3D
 
-
 func _update_hp_bar() -> void:
 	if _hp_bar_fill != null:
 		_hp_bar_fill.scale.x = clampf(current_hp / maxf(1.0, max_hp), 0.0, 1.0)
-
 
 func _collect_body_meshes() -> void:
 	_meshes.clear()

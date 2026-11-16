@@ -49,7 +49,7 @@ func _test_audio_manager_hybrid_and_buses() -> bool:
 	am.start_music()
 
 	var before_cnt: int = am.played_events_count
-	for wid in ["pistol", "smg", "shotgun", "laser_gun", "rocket_launcher", "katana", "lightsaber"]:
+	for wid in ["pistol", "smg", "shotgun", "laser_gun", "rocket_launcher", "katana", "sniper"]:
 		am.play_weapon_shot(wid)
 	for sfx_id in ["droid_hit", "droid_explode", "barrel_explode", "pickup", "level_up", "player_hurt", "wave_start"]:
 		am.play_sfx(sfx_id)

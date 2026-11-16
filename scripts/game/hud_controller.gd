@@ -94,7 +94,7 @@ func _process(delta: float) -> void:
 		var aiming := _player != null and _player.is_aiming
 		var sp := float(def.get("spread_aim_deg", 0.2) if aiming else def.get("spread_hip_deg", 1.0))
 		var mv := clampf(Vector2(_player.velocity.x, _player.velocity.z).length() / 8.6, 0.0, 1.0) if _player != null else 0.0
-		_crosshair.update_crosshair(delta, sp, aiming, mv)
+		_crosshair.update_crosshair(delta, sp, aiming, mv, str(def.get("id", "")))
 	if _gm != null and _gm.loadout != null:
 		_refresh_weapon_bar()
 		_wave_lbl.text = "ONDA %d  •  RESTAM: %d" % [_gm.current_wave, _gm.enemies_remaining_in_wave]

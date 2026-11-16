@@ -20,7 +20,7 @@ func _init() -> void:
 	db.load_from_file()
 
 	# 1. Schema & SMG auto weapon check: all 7 weapons must have tps/fps grip config
-	for wid in ["pistol", "lightsaber", "shotgun", "rocket_launcher", "katana", "laser_gun", "smg"]:
+	for wid in ["pistol", "sniper", "shotgun", "rocket_launcher", "katana", "laser_gun", "smg"]:
 		var w: Dictionary = db.get_weapon_by_id(wid)
 		_assert(not w.is_empty(), "Weapon %s must exist in game_balance.json" % wid)
 		_assert(w.has("tps_grip_pos"), "Weapon %s must define tps_grip_pos" % wid)
@@ -82,12 +82,12 @@ func _init() -> void:
 	_assert(atree != null and str(atree.get("parameters/UpperIdle/current_state")) == "rifle", "SMG must use rifle UpperIdle")
 	_assert(atree != null and str(atree.get("parameters/GripChoice/current_state")) == "both", "SMG must use both-hands GripChoice")
 
-	# 4. Check FPS Viewmodel grip alignment for pistol, katana, lightsaber, and smg
+	# 4. Check FPS Viewmodel grip alignment for pistol, katana, sniper, and smg
 	var fps_vm := FPSViewmodelRef.new()
 	root.add_child(fps_vm)
 	fps_vm.set_active(true)
 	await process_frame
-	for wid in ["pistol", "katana", "lightsaber", "smg"]:
+	for wid in ["pistol", "katana", "sniper", "smg"]:
 		var def: Dictionary = db.get_weapon_by_id(wid)
 		fps_vm.set_weapon(def)
 		fps_vm.update_viewmodel(0.05, 0.0, 5.8, true, false, false)

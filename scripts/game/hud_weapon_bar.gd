@@ -65,7 +65,8 @@ func refresh(lo: WeaponLoadoutRef) -> void:
 			ammo_txt = "%d / %d" % [int(st["mag"]), int(st["reserve"])]
 		elif at == "battery":
 			ammo_txt = "%d%%" % roundi((float(st["battery"]) / maxf(1.0, float(st["battery_max"]))) * 100.0)
-		_slot_labels[i].text = "[%d] %s\n%s" % [i + 1, str(st["display_name"]), ammo_txt]
+		var label_name := "SNIPER" if str(st.get("id", "")) == "sniper" else str(st["display_name"])
+		_slot_labels[i].text = "[%d] %s\n%s" % [i + 1, label_name, ammo_txt]
 		var box := StyleBoxFlat.new()
 		var sel := bool(st["is_selected"])
 		box.bg_color = Color(0.10, 0.22, 0.34, 0.92) if sel else Color(0.06, 0.09, 0.14, 0.78)

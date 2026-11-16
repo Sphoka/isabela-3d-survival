@@ -10,6 +10,8 @@ signal crate_spawned(crate: Node3D)
 
 @export var droid_small_scene: PackedScene
 @export var droid_tall_scene: PackedScene
+@export var droid_spider_scene: PackedScene = preload("res://scenes/game/droid_spider.tscn")
+@export var droid_sawbox_scene: PackedScene = preload("res://scenes/game/droid_sawbox.tscn")
 @export var crate_scene: PackedScene
 
 var _db: BalanceDBRef
@@ -58,10 +60,16 @@ func queue_wave(wave_spec: Dictionary) -> void:
 	_queue.clear()
 	var small_n := int(wave_spec.get("small_count", 0))
 	var tall_n := int(wave_spec.get("tall_count", 0))
+	var spider_n := int(wave_spec.get("spider_count", 0))
+	var sawbox_n := int(wave_spec.get("sawbox_count", 0))
 	for _i in range(small_n):
 		_queue.append("droid_small")
 	for _j in range(tall_n):
 		_queue.append("droid_tall")
+	for _k in range(spider_n):
+		_queue.append("droid_spider")
+	for _m in range(sawbox_n):
+		_queue.append("droid_sawbox")
 	for idx in range(_queue.size() - 1, 0, -1):
 		var swap_idx := _rng.randi_range(0, idx)
 		var tmp := _queue[idx]
@@ -149,12 +157,18 @@ func maybe_drop_crate_at(world_pos: Vector3, drop_chance: float, hp_ratio: float
 
 
 func _spawn_enemy(enemy_id: String) -> void:
-	var scene := droid_tall_scene if enemy_id == "droid_tall" else droid_small_scene
+	var scene: PackedScene = droid_small_scene
+	if enemy_id == "droid_tall":
+		scene = droid_tall_scene
+	elif enemy_id == "droid_spider":
+		scene = droid_spider_scene
+	elif enemy_id == "droid_sawbox":
+		scene = droid_sawbox_scene
 	if scene == null:
 		push_error("WaveSpawner: missing PackedScene for '%s'" % enemy_id)
 		return
 	var p_pos := _player.global_position if _player != null else Vector3.ZERO
-	var spawn_pos := pick_ring_spawn_position(p_pos)
+	var spawn_pos := _pick_spawn_position(enemy_id, p_pos)
 	var enemy := scene.instantiate() as Node3D
 	enemy.position = _entities_root.to_local(spawn_pos) if _entities_root.is_inside_tree() else spawn_pos
 	_entities_root.add_child(enemy)
@@ -200,6 +214,16 @@ func _spawn_drop_beam_fx(pos: Vector3) -> void:
 	var tw := beam.create_tween()
 	tw.tween_property(mat, "albedo_color:a", 0.0, 0.55)
 	tw.tween_callback(beam.queue_free)
+
+
+func _pick_spawn_position(enemy_id: String, player_pos: Vector3) -> Vector3:
+	if (enemy_id == "droid_tall" or enemy_id == "droid_spider") and _rng.randf() < 0.25 and is_inside_tree():
+		var elev := get_tree().get_first_node_in_group("arena_elevators")
+		if elev != null and elev.has_method("get_ranged_spawn_position"):
+			var elev_pos: Vector3 = elev.call("get_ranged_spawn_position", _rng)
+			if elev_pos != Vector3.ZERO and elev_pos.distance_to(player_pos) >= 6.0:
+				return elev_pos
+	return pick_ring_spawn_position(player_pos)
 
 
 func _is_spot_clear(pos: Vector3, margin_m: float) -> bool:

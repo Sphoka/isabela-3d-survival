@@ -7,7 +7,7 @@ signal menu_requested()
 
 const WEAPON_LABELS := {
 	"pistol": "Pistola Tática",
-	"lightsaber": "Sabre de Luz",
+	"sniper": "Rifle Sniper",
 	"shotgun": "Escopeta Tática",
 	"rocket_launcher": "Lança-Foguetes",
 	"rocket_direct": "Lança-Foguetes",

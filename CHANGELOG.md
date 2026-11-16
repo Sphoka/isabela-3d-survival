@@ -1,5 +1,28 @@
 # CHANGELOG — Projeto Isabela 3D
 
+## [2026-11-15] 3rd-Person Arm/Mesh Fix, Sniper Rifle (Slot 2), FPS Optic Transparency & Arena Elevators
+- **`assets/SK_Isabela/SK_Isabela_Leeloo.glb` & `scripts/game/player_animator.gd`**:
+  - Fixed 3rd-person character distortions by removing stray hand/finger vertices and weights from `SK_Isabela_Leeloo_Legs`, removing jagged `SK_Isabela_Leeloo_Straps`, cleaning finger weights on `SK_Isabela_Top`, and pushing clothing/hair meshes cleanly outside `SK_Isabela_Body` (while keeping base `SK_Isabela.glb`, `main_isabela_scene.tscn`, and `test_fase1..5_*.tscn` untouched).
+  - Adjusted `Sword_Idle` (`uidle == "sword"`) left-arm guard pose in `player_animator.gd` (`LeftShoulder`, `LeftUpperArm`, `LeftLowerArm`) to prevent backward ribcage twist.
+- **`assets/SM_Weapon_Sniper/SM_Weapon_Sniper.glb`, `data/game_balance.json`, `scripts/game/weapon_manager.gd`, `scripts/game/hud_weapon_bar.gd`, `scripts/game/game_over_modal_ui.gd`, `scripts/game/procedural_sfx.gd` & `scripts/game/audio_manager.gd`**:
+  - Replaced slot 2 (`lightsaber`) with **`sniper` ("Rifle Sniper")** featuring a dedicated 3D rifle & scope model (`Scope`, `ScopeLens`, `Muzzle`), `hitscan_pierce` delivery (`damage = 95.0`, `headshot_multiplier = 3.5`, `pierce_count = 2`, `spread_aim_deg = 0.02`, `mag_size = 5`, `grip_pose = "both"`), golden sniper tracer + headshot crit sparks, `"SNIPER"` HUD badge, and `"sniper"` high-caliber shot SFX.
+- **`scripts/game/fps_optic_helper.gd` (new), `scripts/game/fps_viewmodel.gd`, `scripts/game/hud_crosshair.gd` & `scripts/game/hud_controller.gd`**:
+  - Added `FPSOpticHelper` to make scope/optic housings and lenses transparent during 1st-person ADS (and restore opaque materials on exit), aligned `WEAPON_TWEAKS["sniper"]` to the scope centerline, and added precision optic & sniper mil-dot reticles in `hud_crosshair.gd`.
+- **`scripts/game/arena_elevators.gd` (new), `scripts/game/arena_coordinator.gd`, `scripts/game/wave_spawner.gd`, `scripts/game/enemy_variants_helper.gd`, `scripts/game/enemy_droid.gd` & `tests/test_arena_elevators.gd` (new)**:
+  - Added 4 oscillating `AnimatableBody3D` elevator platforms (`y = 0.35m..4.2m`, `sync_to_physics = true`) with a 25% ranged-enemy spawn chance (`droid_tall`, `droid_spider`) and ledge-holding AI (`should_hold_elevator_ledge`).
+
+## [2026-11-15] Leeloo Visual Upgrade, Electric Perimeter Hazard, Wave 5/10 Enemies & Expanded SFX
+- **`assets/SK_Isabela/SK_Isabela_Leeloo.glb` & `scenes/game/player_isabela.tscn`**:
+  - Created Leeloo-inspired playable character variant in Blender (`SK_Isabela_Leeloo.glb`, preserving the exact 84-bone `Armature_Isabela`, 52 ARKit blendshapes, `SpringBoneSimulator3D`, and `WeaponSocket`) with orange Chanel bob hair, orange tactical jumpsuit, and iconic orange harness straps (`T_Leeloo_Hair_BaseColor.png`, `T_Leeloo_Top_BaseColor.png`, `T_Leeloo_Lingerie_BaseColor.png`), leaving base `SK_Isabela.glb`, `main_isabela_scene.tscn`, and `test_fase1..5_*.tscn` untouched.
+- **`scripts/game/arena_electric_perimeter.gd` & `scripts/game/arena_coordinator.gd`**:
+  - Added `ArenaElectricPerimeter` with 16 perimeter pylons, pulsing cyan-blue barrier rails, animated jagged `ImmediateMesh` arcs, and a `10.0 dmg/s` electric shock hazard (`0.5s` tick interval) with inward knockback and `electric_shock` SFX when touching the arena boundary (`playable_radius_m - perimeter_electric_width_m`).
+- **`data/game_balance.json`, `scripts/game/balance_db.gd`, `scripts/game/wave_spawner.gd`, `scripts/game/enemy_droid.gd`, `scripts/game/enemy_variants_helper.gd`, `scenes/game/droid_spider.tscn`, `scenes/game/droid_sawbox.tscn`**:
+  - Added `droid_spider` (Arachnotron-inspired 6-legged spider with dorsal plasma autocannon, `base_hp = 260.0`, introduced at **Wave 5+**) and `droid_sawbox` (armored cube with spinning lateral circular saws, `base_hp = 420.0`, highest HP of all 4 enemies, introduced at **Wave 10+**).
+- **`scripts/game/procedural_sfx.gd` & `scripts/game/audio_manager.gd`**:
+  - Added procedural `AudioStreamWAV` generation and preloading for `electric_shock`, `droid_small`, `droid_tall`, `droid_spider_cannon`, `droid_spider_step`, `droid_sawbox_hum`, `droid_sawbox_impact`, `enemy_hit`, `enemy_death`, `rocket_explode`, and `laser_overheat`.
+- **`tests/test_v3_features.gd`**:
+  - Added dedicated headless verification suite covering the electric perimeter (`~10 dmg/s`), Wave 5/10 enemy progression & HP ordering, all new `ProceduralSFX` IDs, and `SK_Isabela_Leeloo.glb` integration.
+
 ## [2026-11-15] Upgrade Confirm-Only, Auto-Reload, Laser Overheat/Cooldown Anims & "Você Morreu"
 - **`scripts/game/upgrade_modal_ui.gd`**:
   - Clicking the upgrade card body (`btn.pressed`) now only focuses/highlights the card (`_set_selected_index`), requiring an explicit click on the **CONFIRMAR** button (or `1`/`2`/`3` / gamepad `X`/`Y`/`B`) to apply the upgrade.

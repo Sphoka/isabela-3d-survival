@@ -93,9 +93,15 @@ func play_weapon_shot(weapon_id: String) -> void:
 		"smg":
 			vol = -5.5
 			jitter = 0.09
-		"shotgun", "rocket_launcher":
+		"shotgun", "rocket_launcher", "sniper":
 			vol = -2.0
 			jitter = 0.05
+		"laser_gun":
+			vol = -3.0
+			jitter = 0.04
+		"lightsaber", "katana":
+			vol = -2.5
+			jitter = 0.06
 	play_sfx(weapon_id, jitter, vol)
 
 
@@ -161,10 +167,13 @@ func _preload_default_streams() -> void:
 		_music_stream = ProceduralSFXRef.make_punk_loop()
 
 	for sfx_id in [
-		"pistol", "smg", "shotgun", "laser_gun", "rocket_launcher",
-		"katana", "lightsaber", "droid_hit", "droid_explode",
-		"barrel_explode", "pickup", "level_up", "player_hurt",
-		"wave_start", "reload", "upgrade_appear", "metal_click",
+		"pistol", "smg", "shotgun", "laser_gun", "laser_overheat",
+		"rocket_launcher", "rocket_explode", "katana", "sniper", "lightsaber", "reload",
+		"droid_small", "droid_tall", "droid_spider_cannon", "droid_spider_step",
+		"droid_sawbox_hum", "droid_sawbox_impact", "enemy_hit", "enemy_death",
+		"droid_hit", "droid_explode", "barrel_explode", "electric_shock",
+		"pickup", "level_up", "player_hurt", "wave_start",
+		"upgrade_appear", "metal_click",
 	]:
 		_resolve_sfx_stream(sfx_id)
 

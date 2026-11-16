@@ -14,6 +14,7 @@ var _hit_left: float = 0.0
 var _gap_px: float = 7.0
 var _is_fps: bool = false
 var _doom_centered: bool = false
+var _optic_mode: int = 0  # 0=standard, 1=fps_ads_optic, 2=sniper_scope
 
 
 func _ready() -> void:
@@ -89,6 +90,8 @@ func build() -> void:
 func set_view_mode(is_fps: bool, doom_centered: bool = false) -> void:
 	_is_fps = is_fps
 	_doom_centered = doom_centered
+	_optic_mode = 0
+	queue_redraw()
 	_sync_full_rect()
 	if _dot_bg != null:
 		_dot_bg.visible = true
@@ -117,12 +120,17 @@ func trigger_hitmarker(is_crit: bool) -> void:
 		hr.visible = true
 
 
-func update_crosshair(delta: float, spread_deg: float, is_aiming: bool, move_ratio: float) -> void:
+func update_crosshair(delta: float, spread_deg: float, is_aiming: bool, move_ratio: float, weapon_id: String = "") -> void:
 	if _hit_left > 0.0:
 		_hit_left = maxf(0.0, _hit_left - delta)
 		if _hit_left <= 0.0:
 			for hr in _hit_rects:
 				hr.visible = false
+	var new_mode := 2 if (is_aiming and weapon_id == "sniper") else (1 if (_is_fps and is_aiming and not (weapon_id in ["katana", "lightsaber"])) else 0)
+	if new_mode != _optic_mode:
+		_optic_mode = new_mode
+		_apply_optic_visibility()
+		queue_redraw()
 	var target_gap := (4.5 if is_aiming else 7.5) + spread_deg * 1.45 + move_ratio * 4.5
 	if _is_fps and is_aiming:
 		target_gap *= 0.72
@@ -130,11 +138,46 @@ func update_crosshair(delta: float, spread_deg: float, is_aiming: bool, move_rat
 	_layout_ticks(_gap_px)
 
 
+func _apply_optic_visibility() -> void:
+	var show_std_ticks := _optic_mode != 2
+	for t in _ticks:
+		t.visible = show_std_ticks
+	for tb in _tick_bgs:
+		tb.visible = (_optic_mode == 0)
+	if _dot_bg != null:
+		_dot_bg.visible = (_optic_mode == 0)
+
+
+func _draw() -> void:
+	if _optic_mode == 0:
+		return
+	var c := size * 0.5
+	if _optic_mode == 1:
+		var col := Color(0.22, 1.0, 0.78, 0.45)
+		draw_arc(c, 22.0, 0.0, TAU, 48, col, 1.2, true)
+		for dir in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
+			draw_line(c + dir * 22.0, c + dir * 28.0, col, 1.2, true)
+		return
+	var ring_r := clampf(minf(size.x, size.y) * 0.30, 130.0, 260.0)
+	draw_arc(c, ring_r + 2.0, 0.0, TAU, 72, Color(0.02, 0.04, 0.06, 0.62), 3.0, true)
+	draw_arc(c, ring_r, 0.0, TAU, 72, Color(0.25, 0.96, 0.85, 0.65), 1.3, true)
+	var stadia_col := Color(0.25, 0.98, 0.86, 0.80)
+	var notch_col := Color(0.25, 0.98, 0.86, 0.52)
+	for d in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
+		var dir: Vector2 = d
+		draw_line(c + dir * 12.0, c + dir * (ring_r - 3.0), stadia_col, 1.0, true)
+		var perp := Vector2(-dir.y, dir.x)
+		for dist in [34.0, 64.0, 94.0, 124.0]:
+			if dist < ring_r - 8.0:
+				var p: Vector2 = c + dir * dist
+				draw_line(p - perp * 3.5, p + perp * 3.5, notch_col, 1.0, true)
+
+
 func _layout_ticks(g: float) -> void:
 	if _ticks.size() < 4:
 		return
-	var len_px := 11.0 if _is_fps else 9.0
-	var th := 1.5
+	var len_px := 7.0 if _optic_mode == 1 else (11.0 if _is_fps else 9.0)
+	var th := 1.0 if _optic_mode == 1 else 1.5
 	var rects := [
 		Rect2(-th, -(g + len_px), th * 2.0, len_px),
 		Rect2(-th, g, th * 2.0, len_px),
