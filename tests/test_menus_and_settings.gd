@@ -91,6 +91,10 @@ func _test_main_menu_and_modals() -> bool:
 	var smodal := menu.get_node_or_null("SettingsModal") as SettingsModalRef
 	ok = ok and _check(smodal != null, "SettingsModal node exists")
 	if smodal != null:
+		var spanel := smodal.find_children("*", "PanelContainer", true, false)
+		var scenter := smodal.find_children("*", "CenterContainer", true, false)
+		ok = ok and _check(is_equal_approx(smodal.anchor_right, 1.0) and is_equal_approx(smodal.anchor_bottom, 1.0) and is_equal_approx(smodal.offset_right, 0.0), "SettingsModal fills full viewport rect")
+		ok = ok and _check(not scenter.is_empty() and not spanel.is_empty() and (spanel[0] as Node).get_parent() == scenter[0], "SettingsModal panel is centered inside CenterContainer")
 		smodal.switch_tab(1)
 		smodal.close()
 		await process_frame

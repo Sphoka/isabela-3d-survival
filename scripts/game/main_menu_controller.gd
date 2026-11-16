@@ -203,18 +203,18 @@ func _make_menu_button(txt: String, primary: bool) -> Button:
 
 func _build_howto_overlay() -> void:
 	_howto_panel = ColorRect.new()
-	_howto_panel.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_howto_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_howto_panel.color = Color(0.02, 0.02, 0.04, 0.86)
 	_howto_panel.visible = false
 	add_child(_howto_panel)
 
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_howto_panel.add_child(center)
+
 	var p := PanelContainer.new()
-	p.set_anchors_preset(Control.PRESET_CENTER)
-	p.offset_left = -330.0
-	p.offset_top = -220.0
-	p.offset_right = 330.0
-	p.offset_bottom = 220.0
-	_howto_panel.add_child(p)
+	p.custom_minimum_size = Vector2(660.0, 400.0)
+	center.add_child(p)
 
 	var m := MarginContainer.new()
 	m.add_theme_constant_override("margin_left", 24)

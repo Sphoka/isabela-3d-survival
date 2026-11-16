@@ -26,22 +26,22 @@ func ensure_built() -> void:
 	if _built:
 		return
 	_built = true
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	color = Color(0.02, 0.02, 0.04, 0.78)
 
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(center)
+
 	var panel := PanelContainer.new()
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.offset_left = -220.0
-	panel.offset_top = -185.0
-	panel.offset_right = 220.0
-	panel.offset_bottom = 185.0
+	panel.custom_minimum_size = Vector2(440.0, 370.0)
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0.06, 0.06, 0.09, 0.96)
 	sb.border_color = Color(0.88, 0.66, 0.30, 0.90)
 	sb.set_border_width_all(2)
 	sb.set_corner_radius_all(8)
 	panel.add_theme_stylebox_override("panel", sb)
-	add_child(panel)
+	center.add_child(panel)
 
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 24)
