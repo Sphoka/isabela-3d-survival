@@ -58,10 +58,10 @@ func _test_weapon_loadout() -> bool:
 	if not _check(not bool(loadout.get_slot_hud_state(1)["is_reloading"]) and int(loadout.get_slot_hud_state(1)["mag"]) == 15, "Pistol reload should refill mag to 15"):
 		return false
 
-	# Slot 2 Lightsaber unlimited + deflects
+	# Slot 2 Sniper Rifle high headshot multiplier & tight ADS spread
 	loadout.select_slot(2)
-	var saber: Dictionary = loadout.try_fire()
-	if not _check(saber.get("fired", false) and bool(saber.get("deflects_enemy_projectiles", false)), "Lightsaber must deflect"):
+	var sniper: Dictionary = loadout.try_fire(true)
+	if not _check(sniper.get("fired", false) and str(sniper.get("id", "")) == "sniper" and float(sniper.get("headshot_multiplier", 1.0)) >= 3.0 and float(sniper.get("spread_deg", 1.0)) <= 0.05, "Sniper must fire with high headshot multiplier and tight ADS spread"):
 		return false
 
 	# Slot 5 Katana 3-hit combo progression

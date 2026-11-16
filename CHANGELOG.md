@@ -1,5 +1,39 @@
 # CHANGELOG — Projeto Isabela 3D
 
+## [2026-11-15] 3rd-Person Arm/Mesh Fix, Sniper Rifle (Slot 2), FPS Optic Transparency & Arena Elevators
+- **`assets/SK_Isabela/SK_Isabela_Leeloo.glb` & `scripts/game/player_animator.gd`**:
+  - Fixed 3rd-person character distortions by removing stray hand/finger vertices and weights from `SK_Isabela_Leeloo_Legs`, removing jagged `SK_Isabela_Leeloo_Straps`, cleaning finger weights on `SK_Isabela_Top`, and pushing clothing/hair meshes cleanly outside `SK_Isabela_Body` (while keeping base `SK_Isabela.glb`, `main_isabela_scene.tscn`, and `test_fase1..5_*.tscn` untouched).
+  - Adjusted `Sword_Idle` (`uidle == "sword"`) left-arm guard pose in `player_animator.gd` (`LeftShoulder`, `LeftUpperArm`, `LeftLowerArm`) to prevent backward ribcage twist.
+- **`assets/SM_Weapon_Sniper/SM_Weapon_Sniper.glb`, `data/game_balance.json`, `scripts/game/weapon_manager.gd`, `scripts/game/hud_weapon_bar.gd`, `scripts/game/game_over_modal_ui.gd`, `scripts/game/procedural_sfx.gd` & `scripts/game/audio_manager.gd`**:
+  - Replaced slot 2 (`lightsaber`) with **`sniper` ("Rifle Sniper")** featuring a dedicated 3D rifle & scope model (`Scope`, `ScopeLens`, `Muzzle`), `hitscan_pierce` delivery (`damage = 95.0`, `headshot_multiplier = 3.5`, `pierce_count = 2`, `spread_aim_deg = 0.02`, `mag_size = 5`, `grip_pose = "both"`), golden sniper tracer + headshot crit sparks, `"SNIPER"` HUD badge, and `"sniper"` high-caliber shot SFX.
+- **`scripts/game/fps_optic_helper.gd` (new), `scripts/game/fps_viewmodel.gd`, `scripts/game/hud_crosshair.gd` & `scripts/game/hud_controller.gd`**:
+  - Added `FPSOpticHelper` to make scope/optic housings and lenses transparent during 1st-person ADS (and restore opaque materials on exit), aligned `WEAPON_TWEAKS["sniper"]` to the scope centerline, and added precision optic & sniper mil-dot reticles in `hud_crosshair.gd`.
+- **`scripts/game/arena_elevators.gd` (new), `scripts/game/arena_coordinator.gd`, `scripts/game/wave_spawner.gd`, `scripts/game/enemy_variants_helper.gd`, `scripts/game/enemy_droid.gd` & `tests/test_arena_elevators.gd` (new)**:
+  - Added 4 oscillating `AnimatableBody3D` elevator platforms (`y = 0.35m..4.2m`, `sync_to_physics = true`) with a 25% ranged-enemy spawn chance (`droid_tall`, `droid_spider`) and ledge-holding AI (`should_hold_elevator_ledge`).
+
+## [2026-11-15] Leeloo Visual Upgrade, Electric Perimeter Hazard, Wave 5/10 Enemies & Expanded SFX
+- **`assets/SK_Isabela/SK_Isabela_Leeloo.glb` & `scenes/game/player_isabela.tscn`**:
+  - Created Leeloo-inspired playable character variant in Blender (`SK_Isabela_Leeloo.glb`, preserving the exact 84-bone `Armature_Isabela`, 52 ARKit blendshapes, `SpringBoneSimulator3D`, and `WeaponSocket`) with orange Chanel bob hair, orange tactical jumpsuit, and iconic orange harness straps (`T_Leeloo_Hair_BaseColor.png`, `T_Leeloo_Top_BaseColor.png`, `T_Leeloo_Lingerie_BaseColor.png`), leaving base `SK_Isabela.glb`, `main_isabela_scene.tscn`, and `test_fase1..5_*.tscn` untouched.
+- **`scripts/game/arena_electric_perimeter.gd` & `scripts/game/arena_coordinator.gd`**:
+  - Added `ArenaElectricPerimeter` with 16 perimeter pylons, pulsing cyan-blue barrier rails, animated jagged `ImmediateMesh` arcs, and a `10.0 dmg/s` electric shock hazard (`0.5s` tick interval) with inward knockback and `electric_shock` SFX when touching the arena boundary (`playable_radius_m - perimeter_electric_width_m`).
+- **`data/game_balance.json`, `scripts/game/balance_db.gd`, `scripts/game/wave_spawner.gd`, `scripts/game/enemy_droid.gd`, `scripts/game/enemy_variants_helper.gd`, `scenes/game/droid_spider.tscn`, `scenes/game/droid_sawbox.tscn`**:
+  - Added `droid_spider` (Arachnotron-inspired 6-legged spider with dorsal plasma autocannon, `base_hp = 260.0`, introduced at **Wave 5+**) and `droid_sawbox` (armored cube with spinning lateral circular saws, `base_hp = 420.0`, highest HP of all 4 enemies, introduced at **Wave 10+**).
+- **`scripts/game/procedural_sfx.gd` & `scripts/game/audio_manager.gd`**:
+  - Added procedural `AudioStreamWAV` generation and preloading for `electric_shock`, `droid_small`, `droid_tall`, `droid_spider_cannon`, `droid_spider_step`, `droid_sawbox_hum`, `droid_sawbox_impact`, `enemy_hit`, `enemy_death`, `rocket_explode`, and `laser_overheat`.
+- **`tests/test_v3_features.gd`**:
+  - Added dedicated headless verification suite covering the electric perimeter (`~10 dmg/s`), Wave 5/10 enemy progression & HP ordering, all new `ProceduralSFX` IDs, and `SK_Isabela_Leeloo.glb` integration.
+
+## [2026-11-15] Upgrade Confirm-Only, Auto-Reload, Laser Overheat/Cooldown Anims & "Você Morreu"
+- **`scripts/game/upgrade_modal_ui.gd`**:
+  - Clicking the upgrade card body (`btn.pressed`) now only focuses/highlights the card (`_set_selected_index`), requiring an explicit click on the **CONFIRMAR** button (or `1`/`2`/`3` / gamepad `X`/`Y`/`B`) to apply the upgrade.
+- **`scripts/game/player_combat_helper.gd` & `scripts/game/fps_viewmodel.gd`**:
+  - Added `_sync_weapon_state_anims` to detect state transitions on both manual `[R]` and automatic empty-magazine reloads, triggering reload SFX + TPS/FPS reload animations.
+  - Added `trigger_laser_overheat` (thermal jitter, tilted vent pose, pulsing orange-red overlay) and `trigger_laser_ready` (cool-down snap-back + cyan ready flash) when the Laser Gun overheats and cools down.
+- **`scripts/game/game_over_modal_ui.gd`**:
+  - Updated the centered Game Over title to **`VOCÊ MORREU`** alongside the existing summary and menu buttons (`JOGAR NOVAMENTE`, `MENU PRINCIPAL`).
+- **`tests/test_menus_and_settings.gd`**:
+  - Added unit coverage for confirm-only card selection, `VOCÊ MORREU` title, and FPS viewmodel reload/overheat/ready animations.
+
 ## 2026-11-13
 - **Created** `data/game_balance.json`: Added full playable wave-survival game configuration (arena bounds, `SK_Isabela` player physics/camera/dash, 6 weapons with combat balance and 3D `.glb` modeling specs/offsets, 2 pickup crates, `SK_Droid_Small` & `SK_Droid_Tall` enemy stats, wave progression curves, rarity weights, and 10 stackable upgrades). Validated via Godot 4.7.2 `--headless` JSON parse check (`JSON_OK weapons=6 pickups=2 upgrades=10`).
 - **Created** `GAME_DESIGN.md`: Added complete Game Design & Godot 4.7.2 modular technical architecture document (`res://scenes/game/` + `res://scripts/game/`), non-interference rules preserving `main_isabela_scene.tscn`, verified bone/blendshape references, 3D modeling briefs for `@blender-author`, and verification acceptance criteria.
@@ -162,4 +196,17 @@
   - [`scripts/game/arena_coordinator.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/arena_coordinator.gd) & [`scripts/game/player_combat_helper.gd`](file:///D:/Godot/isabela_scene_test/scripts/game/player_combat_helper.gd): ligados todos os eventos sonoros de tiro, corte, recarga, acerto, explosões, coleta, level-up, onda e pausa.
 - **Testes**:
   - Adicionada suíte [`tests/test_trilha_a_audio_and_destruction.gd`](file:///D:/Godot/isabela_scene_test/tests/test_trilha_a_audio_and_destruction.gd); todas as **10 suítes headless** passaram (`TOTAL_FAILED=0`) e todos os `scripts/game/*.gd` estão `< 300` linhas (máximo `299` em `player_animator.gd`, `295` em `weapon_manager.gd`).
+
+## [2026-11-15 15:40] Ponto 2 — Interface, Menus & UX (Menu Duna Sci-Fi, Configurações, Pausa & Game Over Roguelite)
+- **Backups criados**: `.backups/20261115_153154/` (`hud_controller.gd`, `game_manager.gd`, `arena_coordinator.gd`, `player_camera_rig.gd`, `weapon_manager.gd`, `audio_manager.gd`, `enemy_droid.gd`, `CHANGELOG.md`).
+- **Menu Principal Estilo Duna**:
+  - Criados [`scenes/game/main_menu.tscn`](file:///c:/Users/sphok/isabela-3d-survival/scenes/game/main_menu.tscn), [`scripts/game/main_menu_controller.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/main_menu_controller.gd) e [`scripts/game/dune_backdrop.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/dune_backdrop.gd): atmosfera desértica crepuscular com silhuetas de dunas, nave orbital e partículas de poeira/especiaria, botões `INICIAR MISSÃO`, `CONFIGURAÇÕES`, `COMO JOGAR & CONTROLES` e `SAIR`, com navegação completa por Teclado/Gamepad e trilha sonora.
+- **Sistema de Configurações & Persistência**:
+  - Criados [`scripts/game/settings_manager.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/settings_manager.gd) e [`scripts/game/settings_modal_ui.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/settings_modal_ui.gd): persistência em `user://settings.cfg` com abas `ÁUDIO` (Master, Música, SFX), `VÍDEO` (Tela Cheia, V-Sync, FOV) e `CONTROLES` (Sensibilidade Mouse/Gamepad, modo padrão FPS), com alternância de abas via `LB`/`RB`.
+  - Integrado suporte em [`scripts/game/audio_manager.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/audio_manager.gd) e [`scripts/game/player_camera_rig.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/player_camera_rig.gd).
+- **Menu de Pausa Completo & Game Over Roguelite**:
+  - Criados [`scripts/game/pause_modal_ui.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/pause_modal_ui.gd) e [`scripts/game/game_over_modal_ui.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/game_over_modal_ui.gd), integrados em [`scripts/game/hud_controller.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/hud_controller.gd).
+  - Atualizados [`scripts/game/game_manager.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/game_manager.gd), [`scripts/game/enemy_droid.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/enemy_droid.gd) e [`scripts/game/arena_coordinator.gd`](file:///c:/Users/sphok/isabela-3d-survival/scripts/game/arena_coordinator.gd) para rastrear dano total por arma, abates por tipo, tempo de corrida e retornar ao `main_menu.tscn`.
+- **Verificação**:
+  - Criada suíte [`tests/test_menus_and_settings.gd`](file:///c:/Users/sphok/isabela-3d-survival/tests/test_menus_and_settings.gd); todas as **11 suítes headless** passaram (`ALL_11_TESTS_PASSED`) e todos os scripts em `scripts/game/*.gd` estão estritamente abaixo de 300 linhas.
 

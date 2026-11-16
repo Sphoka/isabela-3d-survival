@@ -26,19 +26,16 @@ static func process_combat(player: CharacterBody3D, delta: float, loadout: Weapo
 	var def := loadout.get_selected_def()
 	var wid := str(def.get("id", "pistol"))
 	var vm = cam_rig.get_fps_viewmodel() if cam_rig != null else null
-	if Input.is_action_just_pressed("reload") and loadout.start_reload_or_vent():
-		if player.is_inside_tree():
-			player.get_tree().call_group("audio_manager", "play_sfx", "reload")
-		if animator != null:
-			animator.trigger_reload(wid)
-		if vm != null:
-			vm.trigger_reload(float(def.get("reload_time_s", 1.2)))
+	var prev_st := loadout.get_slot_hud_state(loadout.get_selected_slot())
+	var was_reloading := bool(prev_st.get("is_reloading", false))
+	var was_overheated := bool(prev_st.get("is_overheated", false))
+	if Input.is_action_just_pressed("reload"):
+		loadout.start_reload_or_vent()
 	var is_auto := str(def.get("fire_mode", "semi_auto")) in ["auto", "melee_combo"]
 	var trigger := Input.is_action_pressed("fire") if is_auto else Input.is_action_just_pressed("fire")
 	loadout.tick(delta, Input.is_action_pressed("fire"))
-	if not trigger:
-		return res
-	var shot := loadout.try_fire(bool(player.get("is_aiming")))
+	var shot := loadout.try_fire(bool(player.get("is_aiming"))) if trigger else {"fired": false}
+	_sync_weapon_state_anims(player, def, wid, loadout, animator, vm, was_reloading, was_overheated)
 	if not shot.get("fired", false) or weapon_mgr == null:
 		return res
 
@@ -99,3 +96,24 @@ static func clamp_to_arena(player: CharacterBody3D, db: BalanceDB) -> void:
 	if flat.length() > r:
 		flat = flat.normalized() * r
 		player.global_position = Vector3(flat.x, player.global_position.y, flat.y)
+
+
+static func _sync_weapon_state_anims(player: CharacterBody3D, def: Dictionary, wid: String, loadout: WeaponLoadout, animator: PlayerAnimator, vm, was_reloading: bool, was_overheated: bool) -> void:
+	var cur_st := loadout.get_slot_hud_state(loadout.get_selected_slot())
+	var now_reloading := bool(cur_st.get("is_reloading", false))
+	var now_overheated := bool(cur_st.get("is_overheated", false))
+	if not was_reloading and now_reloading:
+		if player.is_inside_tree():
+			player.get_tree().call_group("audio_manager", "play_sfx", "reload")
+		if animator != null:
+			animator.trigger_reload(wid)
+		if vm != null:
+			vm.trigger_reload(float(def.get("reload_time_s", 1.2)))
+	if not was_overheated and now_overheated:
+		if player.is_inside_tree():
+			player.get_tree().call_group("audio_manager", "play_sfx", "reload")
+		if vm != null and vm.has_method("trigger_laser_overheat"):
+			vm.trigger_laser_overheat(float(def.get("overheat_lockout_s", 1.8)))
+	elif was_overheated and not now_overheated:
+		if vm != null and vm.has_method("trigger_laser_ready"):
+			vm.trigger_laser_ready()

@@ -7,8 +7,12 @@ const PlayerControllerRef := preload("res://scripts/game/player_controller.gd")
 const UpgradeModalRef := preload("res://scripts/game/upgrade_modal_ui.gd")
 const HUDWeaponBarRef := preload("res://scripts/game/hud_weapon_bar.gd")
 const HUDCrosshairRef := preload("res://scripts/game/hud_crosshair.gd")
+const PauseModalRef := preload("res://scripts/game/pause_modal_ui.gd")
+const GameOverModalRef := preload("res://scripts/game/game_over_modal_ui.gd")
+const SettingsModalRef := preload("res://scripts/game/settings_modal_ui.gd")
 
 signal restart_requested()
+signal menu_requested()
 
 var _gm: GameManagerRef
 var _player: PlayerControllerRef
@@ -26,10 +30,9 @@ var _vignette: ColorRect
 var _crosshair: HUDCrosshairRef
 var _weapon_bar: HUDWeaponBarRef
 var _upgrade_modal: UpgradeModalRef
-var _pause_panel: PanelContainer
-var _pause_title: Label
-var _pause_stats: Label
-var _pause_btn: Button
+var _pause_modal: PauseModalRef
+var _game_over_modal: GameOverModalRef
+var _settings_modal: SettingsModalRef
 var _vig_left: float = 0.0
 var _banner_left: float = 0.0
 var _built: bool = false
@@ -67,22 +70,12 @@ func _connect_once(sig: Signal, cb: Callable) -> void:
 	if not sig.is_connected(cb):
 		sig.connect(cb)
 
-
-func get_weapon_slot_count() -> int:
-	return _weapon_bar.get_slot_count() if _weapon_bar != null else 0
-
-
-func get_view_mode_text() -> String:
-	return _crosshair.get_view_mode_text() if _crosshair != null else ""
-
-
-func is_upgrade_modal_visible() -> bool:
-	return _upgrade_modal != null and _upgrade_modal.visible
-
-
-func get_upgrade_card_count() -> int:
-	return _upgrade_modal.get_card_count() if _upgrade_modal != null else 0
-
+func get_weapon_slot_count() -> int: return _weapon_bar.get_slot_count() if _weapon_bar != null else 0
+func get_view_mode_text() -> String: return _crosshair.get_view_mode_text() if _crosshair != null else ""
+func is_upgrade_modal_visible() -> bool: return _upgrade_modal != null and _upgrade_modal.visible
+func is_pause_modal_visible() -> bool: return _pause_modal != null and _pause_modal.visible
+func is_game_over_modal_visible() -> bool: return _game_over_modal != null and _game_over_modal.visible
+func get_upgrade_card_count() -> int: return _upgrade_modal.get_card_count() if _upgrade_modal != null else 0
 
 func select_upgrade_card(idx: int) -> void:
 	if _gm != null:
@@ -101,13 +94,15 @@ func _process(delta: float) -> void:
 		var aiming := _player != null and _player.is_aiming
 		var sp := float(def.get("spread_aim_deg", 0.2) if aiming else def.get("spread_hip_deg", 1.0))
 		var mv := clampf(Vector2(_player.velocity.x, _player.velocity.z).length() / 8.6, 0.0, 1.0) if _player != null else 0.0
-		_crosshair.update_crosshair(delta, sp, aiming, mv)
+		_crosshair.update_crosshair(delta, sp, aiming, mv, str(def.get("id", "")))
 	if _gm != null and _gm.loadout != null:
 		_refresh_weapon_bar()
 		_wave_lbl.text = "ONDA %d  •  RESTAM: %d" % [_gm.current_wave, _gm.enemies_remaining_in_wave]
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _settings_modal != null and _settings_modal.visible:
+		return
 	if _gm != null and event.is_action_pressed("pause"):
 		if _gm.state == GameManagerRef.State.PLAYING or _gm.state == GameManagerRef.State.PAUSED:
 			_gm.toggle_pause()
@@ -140,9 +135,7 @@ func _ensure_ui() -> void:
 	_score_lbl = _make_label("ABATES: 0  •  PONTOS: 0", 16, Color(0.75, 0.9, 1.0))
 	top_row.add_child(_score_lbl)
 
-	_xp_bar = ProgressBar.new()
-	_xp_bar.custom_minimum_size = Vector2(0.0, 14.0)
-	_xp_bar.show_percentage = false
+	_xp_bar = _make_bar(Vector2(0.0, 14.0), 80.0)
 	top_box.add_child(_xp_bar)
 	_xp_lbl = _make_label("NÍVEL 1  •  0 / 80 XP", 13, Color(0.82, 0.92, 1.0))
 	_xp_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -157,12 +150,10 @@ func _ensure_ui() -> void:
 	_banner_lbl.visible = false
 	add_child(_banner_lbl)
 
-	# Center crosshair + hitmarker + [V] view indicator
 	_crosshair = HUDCrosshairRef.new()
 	_crosshair.build()
 	add_child(_crosshair)
 
-	# Bottom-left HP & Dash
 	var bl := VBoxContainer.new()
 	bl.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	bl.offset_left = 20.0
@@ -172,16 +163,11 @@ func _ensure_ui() -> void:
 	add_child(bl)
 	_hp_lbl = _make_label("HP 120 / 120", 16, Color(0.35, 1.0, 0.55))
 	bl.add_child(_hp_lbl)
-	_hp_bar = ProgressBar.new()
-	_hp_bar.custom_minimum_size = Vector2(250.0, 18.0)
-	_hp_bar.show_percentage = false
+	_hp_bar = _make_bar(Vector2(250.0, 18.0), 120.0)
 	bl.add_child(_hp_bar)
 	_dash_lbl = _make_label("DASH [Q]: 1/1", 13, Color(0.45, 0.85, 1.0))
 	bl.add_child(_dash_lbl)
-	_dash_bar = ProgressBar.new()
-	_dash_bar.custom_minimum_size = Vector2(250.0, 10.0)
-	_dash_bar.max_value = 1.0
-	_dash_bar.show_percentage = false
+	_dash_bar = _make_bar(Vector2(250.0, 10.0), 1.0)
 	bl.add_child(_dash_bar)
 
 	# Bottom-center 1-6 weapon bar + reload/heat prompt
@@ -193,32 +179,34 @@ func _ensure_ui() -> void:
 	_upgrade_modal.card_selected.connect(select_upgrade_card)
 	add_child(_upgrade_modal)
 
-	_build_pause_panel()
+	_build_modals()
 
 
-func _build_pause_panel() -> void:
-	_pause_panel = PanelContainer.new()
-	_pause_panel.set_anchors_preset(Control.PRESET_CENTER)
-	_pause_panel.offset_left = -200.0
-	_pause_panel.offset_top = -110.0
-	_pause_panel.offset_right = 200.0
-	_pause_panel.offset_bottom = 110.0
-	_pause_panel.visible = false
-	add_child(_pause_panel)
+func _build_modals() -> void:
+	_pause_modal = PauseModalRef.new()
+	_pause_modal.resume_requested.connect(func() -> void:
+		if _gm != null and _gm.state == GameManagerRef.State.PAUSED:
+			_gm.toggle_pause()
+	)
+	_pause_modal.settings_requested.connect(func() -> void:
+		if _settings_modal != null:
+			_settings_modal.open()
+	)
+	_pause_modal.restart_requested.connect(func() -> void: restart_requested.emit())
+	_pause_modal.menu_requested.connect(func() -> void: menu_requested.emit())
+	add_child(_pause_modal)
 
-	var v := VBoxContainer.new()
-	v.add_theme_constant_override("separation", 12)
-	_pause_panel.add_child(v)
-	_pause_title = _make_label("PAUSADO", 24, Color.WHITE)
-	_pause_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(_pause_title)
-	_pause_stats = _make_label("", 15, Color(0.8, 0.9, 1.0))
-	_pause_stats.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(_pause_stats)
-	_pause_btn = Button.new()
-	_pause_btn.text = "REINICIAR PARTIDA"
-	_pause_btn.pressed.connect(func() -> void: restart_requested.emit())
-	v.add_child(_pause_btn)
+	_game_over_modal = GameOverModalRef.new()
+	_game_over_modal.restart_requested.connect(func() -> void: restart_requested.emit())
+	_game_over_modal.menu_requested.connect(func() -> void: menu_requested.emit())
+	add_child(_game_over_modal)
+
+	_settings_modal = SettingsModalRef.new()
+	_settings_modal.closed.connect(func() -> void:
+		if _pause_modal != null and _pause_modal.visible:
+			_pause_modal.focus_default()
+	)
+	add_child(_settings_modal)
 
 
 func _refresh_weapon_bar() -> void:
@@ -276,13 +264,27 @@ func _on_upgrade_modal_opened(choices: Array) -> void:
 func _on_state_changed(new_state: int) -> void:
 	if new_state != GameManagerRef.State.UPGRADE_MODAL:
 		_upgrade_modal.hide_modal()
-	var show_pause := new_state == GameManagerRef.State.PAUSED or new_state == GameManagerRef.State.GAME_OVER
-	_pause_panel.visible = show_pause
-	if show_pause and _gm != null:
-		_pause_title.text = "FIM DE JOGO" if new_state == GameManagerRef.State.GAME_OVER else "PAUSADO"
-		_pause_stats.text = "Onda %d  •  Abates: %d  •  Pontos: %d" % [_gm.current_wave, _gm.kills, _gm.score]
-		if _pause_btn != null:
-			_pause_btn.grab_focus()
+	if new_state == GameManagerRef.State.PAUSED and _gm != null:
+		_game_over_modal.hide_modal()
+		var upgs: Dictionary = _gm.upgrades.get_all_stacks() if _gm.upgrades != null else {}
+		_pause_modal.show_pause(_gm.current_wave, _gm.kills, _gm.score, upgs)
+	elif new_state == GameManagerRef.State.GAME_OVER and _gm != null:
+		_pause_modal.hide_modal()
+		if _settings_modal != null:
+			_settings_modal.visible = false
+		_game_over_modal.show_summary(_gm.get_run_summary())
+	else:
+		_pause_modal.hide_modal()
+		_game_over_modal.hide_modal()
+		if _settings_modal != null:
+			_settings_modal.visible = false
+
+func _make_bar(min_sz: Vector2, max_v: float) -> ProgressBar:
+	var b := ProgressBar.new()
+	b.custom_minimum_size = min_sz
+	b.max_value = max_v
+	b.show_percentage = false
+	return b
 
 func _make_label(txt: String, size: int, col: Color) -> Label:
 	var l := Label.new()

@@ -31,6 +31,9 @@ var xp_to_next: int = 80
 var score: int = 0
 var kills: int = 0
 var elapsed_time_s: float = 0.0
+var total_damage_dealt: float = 0.0
+var damage_dealt_by_weapon: Dictionary = {}
+var kills_by_type: Dictionary = {}
 var pending_upgrade_drafts: int = 0
 var current_choices: Array[Dictionary] = []
 
@@ -74,6 +77,9 @@ func start_run(manage_scene_pause: bool = true) -> void:
 	score = 0
 	kills = 0
 	elapsed_time_s = 0.0
+	total_damage_dealt = 0.0
+	damage_dealt_by_weapon.clear()
+	kills_by_type.clear()
 	pending_upgrade_drafts = 0
 	current_choices.clear()
 	_waiting_next_wave = false
@@ -99,6 +105,8 @@ func notify_enemy_killed(_enemy_id: String, xp_reward: int, score_reward: int) -
 	if state == State.GAME_OVER:
 		return
 	kills += 1
+	var ekey := _enemy_id if not _enemy_id.is_empty() else "droid_small"
+	kills_by_type[ekey] = int(kills_by_type.get(ekey, 0)) + 1
 	score += score_reward
 	score_changed.emit(score, kills)
 
@@ -165,6 +173,37 @@ func toggle_pause() -> void:
 
 func trigger_game_over() -> void:
 	_set_state(State.GAME_OVER)
+
+
+func record_damage(weapon_id: String, amount: float) -> void:
+	if amount <= 0.0 or state == State.GAME_OVER:
+		return
+	total_damage_dealt += amount
+	var wid := weapon_id if not weapon_id.is_empty() else "other"
+	damage_dealt_by_weapon[wid] = float(damage_dealt_by_weapon.get(wid, 0.0)) + amount
+
+
+func get_run_summary() -> Dictionary:
+	var fav_weapon := "—"
+	var best_dmg := -1.0
+	for wid in damage_dealt_by_weapon.keys():
+		var d := float(damage_dealt_by_weapon[wid])
+		if d > best_dmg:
+			best_dmg = d
+			fav_weapon = str(wid)
+	return {
+		"wave": current_wave,
+		"level": level,
+		"elapsed_s": elapsed_time_s,
+		"kills": kills,
+		"kills_small": int(kills_by_type.get("droid_small", 0)),
+		"kills_tall": int(kills_by_type.get("droid_tall", 0)),
+		"score": score,
+		"total_damage": total_damage_dealt,
+		"favorite_weapon": fav_weapon,
+		"favorite_weapon_dmg": maxf(0.0, best_dmg),
+		"upgrades": upgrades.get_all_stacks() if upgrades != null else {},
+	}
 
 
 func _begin_next_wave() -> void:

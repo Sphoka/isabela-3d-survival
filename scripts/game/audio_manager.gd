@@ -20,6 +20,9 @@ var _sfx_cursor: int = 0
 var _streams: Dictionary = {}
 var _music_stream: AudioStream
 var _rng := RandomNumberGenerator.new()
+var _user_music_ratio: float = 0.70
+var _user_sfx_ratio: float = 0.85
+var _is_paused_duck: bool = false
 
 
 func _ready() -> void:
@@ -52,9 +55,35 @@ func stop_music() -> void:
 
 
 func set_paused_ducking(paused: bool) -> void:
+	_is_paused_duck = paused
+	_sync_music_bus_volume()
+
+
+func apply_user_volumes(music_ratio: float, sfx_ratio: float) -> void:
+	_user_music_ratio = clampf(music_ratio, 0.0, 1.0)
+	_user_sfx_ratio = clampf(sfx_ratio, 0.0, 1.0)
+	_sync_music_bus_volume()
+	var sfx_idx := AudioServer.get_bus_index("SFX")
+	if sfx_idx >= 0:
+		if _user_sfx_ratio <= 0.005:
+			AudioServer.set_bus_mute(sfx_idx, true)
+			AudioServer.set_bus_volume_db(sfx_idx, -80.0)
+		else:
+			AudioServer.set_bus_mute(sfx_idx, false)
+			AudioServer.set_bus_volume_db(sfx_idx, -1.5 + linear_to_db(_user_sfx_ratio))
+
+
+func _sync_music_bus_volume() -> void:
 	var idx := AudioServer.get_bus_index("Music")
-	if idx >= 0:
-		AudioServer.set_bus_volume_db(idx, MUSIC_PAUSED_DB if paused else MUSIC_LIVE_DB)
+	if idx < 0:
+		return
+	var base := MUSIC_PAUSED_DB if _is_paused_duck else MUSIC_LIVE_DB
+	if _user_music_ratio <= 0.005:
+		AudioServer.set_bus_mute(idx, true)
+		AudioServer.set_bus_volume_db(idx, -80.0)
+	else:
+		AudioServer.set_bus_mute(idx, false)
+		AudioServer.set_bus_volume_db(idx, base + linear_to_db(_user_music_ratio))
 
 
 func play_weapon_shot(weapon_id: String) -> void:
@@ -64,9 +93,15 @@ func play_weapon_shot(weapon_id: String) -> void:
 		"smg":
 			vol = -5.5
 			jitter = 0.09
-		"shotgun", "rocket_launcher":
+		"shotgun", "rocket_launcher", "sniper":
 			vol = -2.0
 			jitter = 0.05
+		"laser_gun":
+			vol = -3.0
+			jitter = 0.04
+		"lightsaber", "katana":
+			vol = -2.5
+			jitter = 0.06
 	play_sfx(weapon_id, jitter, vol)
 
 
@@ -132,10 +167,13 @@ func _preload_default_streams() -> void:
 		_music_stream = ProceduralSFXRef.make_punk_loop()
 
 	for sfx_id in [
-		"pistol", "smg", "shotgun", "laser_gun", "rocket_launcher",
-		"katana", "lightsaber", "droid_hit", "droid_explode",
-		"barrel_explode", "pickup", "level_up", "player_hurt",
-		"wave_start", "reload",
+		"pistol", "smg", "shotgun", "laser_gun", "laser_overheat",
+		"rocket_launcher", "rocket_explode", "katana", "sniper", "lightsaber", "reload",
+		"droid_small", "droid_tall", "droid_spider_cannon", "droid_spider_step",
+		"droid_sawbox_hum", "droid_sawbox_impact", "enemy_hit", "enemy_death",
+		"droid_hit", "droid_explode", "barrel_explode", "electric_shock",
+		"pickup", "level_up", "player_hurt", "wave_start",
+		"upgrade_appear", "metal_click",
 	]:
 		_resolve_sfx_stream(sfx_id)
 

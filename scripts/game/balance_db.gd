@@ -119,8 +119,26 @@ func get_wave_spec(wave: int) -> Dictionary:
 			float(cfg.get("tall_ratio_wave_2", 0.18)) + float(cfg.get("tall_ratio_increment_per_wave", 0.04)) * float(w - tall_intro)
 		)
 		tall_count = maxi(1, roundi(float(total) * ratio))
-	var small_count := maxi(0, total - tall_count)
 
+	var spider_intro := int(cfg.get("spider_intro_wave", 5))
+	var spider_count := 0
+	if w >= spider_intro:
+		var s_ratio := minf(
+			float(cfg.get("spider_ratio_cap", 0.28)),
+			float(cfg.get("spider_ratio_wave_5", 0.15)) + float(cfg.get("spider_ratio_increment_per_wave", 0.03)) * float(w - spider_intro)
+		)
+		spider_count = maxi(1, roundi(float(total) * s_ratio))
+
+	var sawbox_intro := int(cfg.get("sawbox_intro_wave", 10))
+	var sawbox_count := 0
+	if w >= sawbox_intro:
+		var b_ratio := minf(
+			float(cfg.get("sawbox_ratio_cap", 0.22)),
+			float(cfg.get("sawbox_ratio_wave_10", 0.12)) + float(cfg.get("sawbox_ratio_increment_per_wave", 0.025)) * float(w - sawbox_intro)
+		)
+		sawbox_count = maxi(1, roundi(float(total) * b_ratio))
+
+	var small_count := maxi(0, total - tall_count - spider_count - sawbox_count)
 	var quad_after := int(cfg.get("hp_quadratic_after_wave", 5))
 	var quad_coeff := float(cfg.get("hp_quadratic_coeff", 0.02))
 	var hp_mult := 1.0 + float(cfg.get("hp_scale_per_wave", 0.18)) * float(w - 1) + quad_coeff * pow(maxf(0.0, float(w - quad_after)), 2.0)
@@ -137,6 +155,8 @@ func get_wave_spec(wave: int) -> Dictionary:
 		"total_enemies": total,
 		"small_count": small_count,
 		"tall_count": tall_count,
+		"spider_count": spider_count,
+		"sawbox_count": sawbox_count,
 		"hp_multiplier": hp_mult,
 		"damage_multiplier": dmg_mult,
 		"spawn_interval_s": spawn_interval,

@@ -28,6 +28,7 @@ func _run_all() -> void:
 	ok = ok and await _test_fps_shooting_and_melee_vfx()
 	ok = ok and _test_hud_view_indicator()
 	ok = ok and await _test_retargeted_anims_and_combat()
+	ok = ok and await _test_fps_optic_transparency_and_sniper_reticle()
 	if not ok:
 		push_error("test_v2_camera_anims_fps FAILED")
 		quit(1)
@@ -282,4 +283,68 @@ func _test_hud_view_indicator() -> bool:
 		host.queue_free()
 		return false
 	host.queue_free()
+	return true
+
+
+func _test_fps_optic_transparency_and_sniper_reticle() -> bool:
+	var host := Node3D.new()
+	root.add_child(host)
+	var gm = GameManagerScript.new()
+	host.add_child(gm)
+	gm.initialize("res://data/game_balance.json", 11)
+	var p := PlayerScene.instantiate()
+	host.add_child(p)
+	p.configure(gm.balance_db, gm.upgrades, gm.loadout)
+	var hud = HUDControllerScript.new()
+	host.add_child(hud)
+	hud.bind(gm, p)
+	await physics_frame
+
+	gm.loadout.select_slot(2)
+	var wm = p.get_node("WeaponManager")
+	wm.refresh_equipped_mesh()
+	p.toggle_view_mode()
+	var vm = p.get_node("CameraPivot").get_fps_viewmodel()
+	if not _check("sniper" in vm.WEAPON_TWEAKS, "FPSViewmodel.WEAPON_TWEAKS must contain sniper"):
+		host.queue_free()
+		return false
+	vm.update_viewmodel(0.05, 0.0, 5.8, true, true, false)
+	var active_w: Node3D = vm.get("_active_weapon")
+	var scope_mesh := active_w.find_child("Scope", true, false) as MeshInstance3D
+	var lens_mesh := active_w.find_child("ScopeLens", true, false) as MeshInstance3D
+	if not _check(scope_mesh != null and lens_mesh != null, "Sniper GLB must expose Scope and ScopeLens meshes"):
+		host.queue_free()
+		return false
+	var lens_mat := lens_mesh.material_override as StandardMaterial3D
+	var scope_mat := scope_mesh.material_override as StandardMaterial3D
+	if not _check(lens_mat != null and lens_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA and lens_mat.albedo_color.a < 0.15, "ScopeLens must be transparent glass in ADS"):
+		host.queue_free()
+		return false
+	if not _check(scope_mat != null and scope_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA and scope_mat.albedo_color.a < 0.25, "Scope housing must be semi-transparent in ADS"):
+		host.queue_free()
+		return false
+
+	# Restore opaque materials when exiting ADS
+	vm.update_viewmodel(0.05, 0.0, 5.8, true, false, false)
+	if not _check(lens_mesh.material_override == null and scope_mesh.material_override == null, "Exiting ADS must restore opaque scope materials"):
+		host.queue_free()
+		return false
+
+	# Crosshair optic modes
+	var ch = hud.get("_crosshair")
+	ch.update_crosshair(0.05, 0.02, true, 0.0, "sniper")
+	if not _check(int(ch.get("_optic_mode")) == 2, "HUDCrosshair must use sniper scope mode (2) when aiming sniper"):
+		host.queue_free()
+		return false
+	ch.update_crosshair(0.05, 0.2, true, 0.0, "pistol")
+	if not _check(int(ch.get("_optic_mode")) == 1, "HUDCrosshair must use precision optic mode (1) in FPS ADS for pistol"):
+		host.queue_free()
+		return false
+	ch.update_crosshair(0.05, 0.2, false, 0.0, "pistol")
+	if not _check(int(ch.get("_optic_mode")) == 0, "HUDCrosshair must return to standard mode (0) when not aiming"):
+		host.queue_free()
+		return false
+
+	host.queue_free()
+	await physics_frame
 	return true

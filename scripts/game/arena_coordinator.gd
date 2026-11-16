@@ -9,6 +9,7 @@ const WaveSpawnerRef := preload("res://scripts/game/wave_spawner.gd")
 const HUDControllerRef := preload("res://scripts/game/hud_controller.gd")
 const AudioManagerRef := preload("res://scripts/game/audio_manager.gd")
 const ArenaPropsRef := preload("res://scripts/game/arena_props.gd")
+const SettingsManagerRef := preload("res://scripts/game/settings_manager.gd")
 
 @export var droid_small_scene: PackedScene
 @export var droid_tall_scene: PackedScene
@@ -113,10 +114,16 @@ func _bind_scene_nodes() -> void:
 		wave_spawner.crate_spawned.connect(_on_crate_spawned)
 	if not hud.restart_requested.is_connected(_on_restart):
 		hud.restart_requested.connect(_on_restart)
+	if hud.has_signal("menu_requested") and not hud.is_connected("menu_requested", _on_return_to_menu):
+		hud.connect("menu_requested", _on_return_to_menu)
 
 
 func _start_game(manage_pause: bool = true) -> void:
 	game_manager.start_run(manage_pause)
+	SettingsManagerRef.apply_all(get_tree() if is_inside_tree() else null)
+	if bool(SettingsManagerRef.get_val("default_fps_mode")) and player != null and player.has_method("is_fps_mode") and not player.is_fps_mode():
+		if player.has_method("toggle_view_mode"):
+			player.call("toggle_view_mode")
 	if _audio != null:
 		_audio.start_music()
 	_update_mouse_mode(game_manager.state)
@@ -132,6 +139,11 @@ func _on_wave_started(_wave: int, spec: Dictionary) -> void:
 func _on_enemy_spawned(enemy: Node3D) -> void:
 	if enemy.has_signal("died"):
 		enemy.connect("died", _on_enemy_died)
+	if enemy.has_signal("took_damage"):
+		enemy.connect("took_damage", func(dmg: float, _crit: bool) -> void:
+			if game_manager != null:
+				game_manager.record_damage(str(enemy.get("last_weapon_id")), dmg)
+		)
 
 
 func _on_enemy_died(_e: Node3D, enemy_id: String, xp: int, sc: int, drop_chance: float, pos: Vector3) -> void:
@@ -155,6 +167,10 @@ func _setup_audio_and_props() -> void:
 		_arena_props.name = "ArenaProps"
 		add_child(_arena_props)
 	_arena_props.build_arena_props()
+	var perim := preload("res://scripts/game/arena_electric_perimeter.gd").new()
+	add_child(perim)
+	perim.setup(game_manager, player, _audio)
+	add_child(preload("res://scripts/game/arena_elevators.gd").new())
 	for barrel in _arena_props.get_barrels():
 		if is_instance_valid(barrel) and not barrel.exploded.is_connected(_on_barrel_exploded):
 			barrel.exploded.connect(_on_barrel_exploded)
@@ -252,6 +268,12 @@ func _on_restart() -> void:
 	if is_inside_tree():
 		get_tree().paused = false
 		get_tree().reload_current_scene()
+
+
+func _on_return_to_menu() -> void:
+	if is_inside_tree():
+		get_tree().paused = false
+		get_tree().change_scene_to_file("res://scenes/game/main_menu.tscn")
 
 
 func _ensure_minimal_arena_nodes() -> void:

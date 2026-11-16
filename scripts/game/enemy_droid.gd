@@ -5,11 +5,13 @@ extends CharacterBody3D
 const BalanceDBRef := preload("res://scripts/game/balance_db.gd")
 const ProjectileRef := preload("res://scripts/game/projectile_controller.gd")
 const DestructionVFXRef := preload("res://scripts/game/droid_destruction_vfx.gd")
+const VariantsHelperRef := preload("res://scripts/game/enemy_variants_helper.gd")
 
 signal died(enemy: Node3D, enemy_id: String, xp_reward: int, score_reward: int, drop_chance: float, world_pos: Vector3)
 signal took_damage(amount: float, is_crit: bool)
 
 var enemy_id: String = "droid_small"
+var last_weapon_id: String = ""
 var max_hp: float = 55.0
 var current_hp: float = 55.0
 var move_speed_mps: float = 4.6
@@ -29,13 +31,18 @@ var _pending_attack: String = ""
 var _knockback_vel: Vector3 = Vector3.ZERO
 var _dead: bool = false
 var _stride_phase: float = 0.0
+var _idle_phase: float = 0.0
+var _arm_windup_blend: float = 0.0
 var _flash_left: float = 0.0
 var _hp_bar_fill: MeshInstance3D
 var _foot_l: Node3D
 var _foot_r: Node3D
+var _skeleton: Skeleton3D
+var _arm_bones: Dictionary = {}
+var _arm_rest: Dictionary = {}
 var _meshes: Array[MeshInstance3D] = []
 var _flash_mat: StandardMaterial3D
-
+var _variants := VariantsHelperRef.new()
 
 func _ready() -> void:
 	add_to_group("enemies")
@@ -44,7 +51,9 @@ func _ready() -> void:
 	_ensure_collision_and_bar()
 	_foot_l = find_child("Target_Foot_L", true, false) as Node3D
 	_foot_r = find_child("Target_Foot_R", true, false) as Node3D
+	_setup_arm_bones()
 	_collect_body_meshes()
+	_variants.bind(self)
 
 
 func configure_from_balance(id: String, db: BalanceDBRef, wave_spec: Dictionary, player: Node3D, proj_parent: Node3D = null) -> void:
@@ -79,6 +88,7 @@ func configure_from_balance(id: String, db: BalanceDBRef, wave_spec: Dictionary,
 func take_damage(amount: float, impulse: Vector3 = Vector3.ZERO, is_crit: bool = false, _weapon_id: String = "", tall_armor_pierce: float = 1.0) -> void:
 	if _dead or amount <= 0.0:
 		return
+	last_weapon_id = _weapon_id
 	var final_dmg := amount * (tall_armor_pierce if enemy_id == "droid_tall" else 1.0)
 	current_hp = maxf(0.0, current_hp - final_dmg)
 	_knockback_vel += Vector3(impulse.x, 0.0, impulse.z) * (1.0 - knockback_resistance)
@@ -94,7 +104,6 @@ func take_damage(amount: float, impulse: Vector3 = Vector3.ZERO, is_crit: bool =
 		DestructionVFXRef.spawn_droid_explosion(fx_parent, global_position if is_inside_tree() else position, enemy_id, impulse)
 		died.emit(self, enemy_id, xp_reward, score_reward, crate_drop_chance, global_position)
 		queue_free()
-
 
 func _physics_process(delta: float) -> void:
 	if _dead:
@@ -133,17 +142,17 @@ func _physics_process(delta: float) -> void:
 
 
 func _choose_move_and_attack(dist: float, dir: Vector3, _delta: float) -> void:
-	var is_tall := enemy_id == "droid_tall"
-	var melee_r := float(_cfg.get("melee_range_m", 2.1) if is_tall else _cfg.get("attack_range_m", 1.55))
+	var has_ranged := enemy_id == "droid_tall" or enemy_id == "droid_spider"
+	var melee_r := float(_cfg.get("melee_range_m", 2.1) if has_ranged else _cfg.get("attack_range_m", 1.55))
 
 	if dist <= melee_r and _cooldown_left <= 0.0:
 		_pending_attack = "melee"
-		_windup_left = float(_cfg.get("melee_windup_s", 0.50) if is_tall else _cfg.get("attack_windup_s", 0.35))
+		_windup_left = float(_cfg.get("melee_windup_s", 0.50) if has_ranged else _cfg.get("attack_windup_s", 0.35))
 		velocity.x = _knockback_vel.x
 		velocity.z = _knockback_vel.z
 		return
 
-	if is_tall and dist <= float(_cfg.get("ranged_max_range_m", 26.0)) and dist > melee_r + 1.0 and _cooldown_left <= 0.0:
+	if has_ranged and dist <= float(_cfg.get("ranged_max_range_m", 26.0)) and dist > melee_r + 1.0 and _cooldown_left <= 0.0:
 		_pending_attack = "ranged"
 		_windup_left = float(_cfg.get("ranged_windup_s", 0.55))
 		velocity.x = _knockback_vel.x
@@ -152,23 +161,26 @@ func _choose_move_and_attack(dist: float, dir: Vector3, _delta: float) -> void:
 
 	var move_dir := _steer_around_obstacles(dir)
 	var desired_speed := move_speed_mps
-	if is_tall and dist <= float(_cfg.get("preferred_range_min_m", 8.0)):
+	if (has_ranged and dist <= float(_cfg.get("preferred_range_min_m", 8.0))) or _variants.should_hold_elevator_ledge(move_dir):
 		desired_speed = 0.0
 	velocity.x = move_dir.x * desired_speed + _knockback_vel.x
 	velocity.z = move_dir.z * desired_speed + _knockback_vel.z
 
 
 func _execute_attack(dist: float, dir: Vector3) -> void:
-	var is_tall := enemy_id == "droid_tall"
+	var has_ranged := enemy_id == "droid_tall" or enemy_id == "droid_spider"
 	if _pending_attack == "melee":
-		_cooldown_left = float(_cfg.get("melee_cooldown_s", 1.60) if is_tall else _cfg.get("attack_cooldown_s", 1.15))
-		var melee_r := float(_cfg.get("melee_range_m", 2.1) if is_tall else _cfg.get("attack_range_m", 1.55)) + 0.45
+		_cooldown_left = float(_cfg.get("melee_cooldown_s", 1.60) if has_ranged else _cfg.get("attack_cooldown_s", 1.15))
+		var melee_r := float(_cfg.get("melee_range_m", 2.1) if has_ranged else _cfg.get("attack_range_m", 1.55)) + 0.45
 		if dist <= melee_r and _player != null and _player.has_method("take_damage"):
-			var dmg := float(_cfg.get("melee_base_damage", 24.0) if is_tall else _cfg.get("base_damage", 12.0)) * _dmg_mult
+			var dmg := float(_cfg.get("melee_base_damage", 24.0) if has_ranged else _cfg.get("base_damage", 12.0)) * _dmg_mult
 			_player.call("take_damage", dmg, dir * 6.0)
 	elif _pending_attack == "ranged":
 		_cooldown_left = float(_cfg.get("ranged_cooldown_s", 2.10))
-		_fire_plasma_bolt()
+		if enemy_id == "droid_spider":
+			_variants.fire_spider_cannon(_player, _cfg, _dmg_mult, _projectiles_parent)
+		else:
+			_fire_plasma_bolt()
 	_pending_attack = ""
 
 
@@ -205,11 +217,49 @@ func _steer_around_obstacles(dir: Vector3) -> Vector3:
 func _animate_ik_targets(delta: float) -> void:
 	var h_spd := Vector2(velocity.x, velocity.z).length()
 	_stride_phase += delta * clampf(h_spd * 2.0, 0.0, 14.0)
+	_idle_phase += delta * 2.4
 	if _foot_l != null and _foot_r != null:
 		var s := sin(_stride_phase) * 0.22 * clampf(h_spd / 3.0, 0.0, 1.0)
 		_foot_l.position = Vector3(0.14, maxf(0.04, cos(_stride_phase) * 0.14), s)
 		_foot_r.position = Vector3(-0.14, maxf(0.04, -cos(_stride_phase) * 0.14), -s)
+	_animate_arms(delta, h_spd)
+	_variants.tick(delta, enemy_id, _player, _cfg, _dmg_mult, _projectiles_parent, h_spd, _stride_phase, _windup_left > 0.0)
 
+
+func _setup_arm_bones() -> void:
+	var skels := find_children("*", "Skeleton3D", true, false)
+	_skeleton = skels[0] as Skeleton3D if not skels.is_empty() else null
+	if _skeleton == null:
+		return
+	var map := {"clav_l": ["shoulder.L", "clavicle.L"], "clav_r": ["shoulder.R", "clavicle.R"], "upper_l": ["upper_arm.L"], "upper_r": ["upper_arm.R"], "fore_l": ["forearm.L"], "fore_r": ["forearm.R"]}
+	for k in map:
+		for b in map[k]:
+			var idx := _skeleton.find_bone(b)
+			if idx >= 0:
+				_arm_bones[k] = idx
+				_arm_rest[k] = _skeleton.get_bone_rest(idx).basis.get_rotation_quaternion()
+				break
+
+func _set_arm_rot(key: String, euler_rad: Vector3) -> void:
+	if _arm_bones.has(key):
+		_skeleton.set_bone_pose_rotation(_arm_bones[key], _arm_rest[key] * Quaternion.from_euler(euler_rad))
+
+func _animate_arms(delta: float, h_spd: float) -> void:
+	if _skeleton == null or _arm_bones.is_empty():
+		return
+	var spd := clampf(h_spd / 3.0, 0.0, 1.0)
+	var swing := sin(_stride_phase) * 0.58 * spd
+	var breathe := sin(_idle_phase) * 0.05
+	_arm_windup_blend = move_toward(_arm_windup_blend, 1.0 if _windup_left > 0.0 else 0.0, delta * 9.0)
+	var r := _pending_attack == "ranged"
+	var wb := _arm_windup_blend
+	var shrug := cos(_stride_phase) * 0.08 * spd
+	_set_arm_rot("clav_l", Vector3(0.22 * wb, 0.0, shrug))
+	_set_arm_rot("clav_r", Vector3(0.22 * wb, 0.0, shrug))
+	_set_arm_rot("upper_l", Vector3(swing - 0.10 + breathe, 0.0, -0.10).lerp(Vector3(-0.45 if r else -1.35, 0.0, -0.18 if r else -0.35), wb))
+	_set_arm_rot("upper_r", Vector3(-swing - 0.10 - breathe, 0.0, 0.10).lerp(Vector3(-1.45 if r else -1.35, 0.0, 0.08 if r else 0.35), wb))
+	_set_arm_rot("fore_l", Vector3(-0.32 - maxf(0.0, -swing) * 0.65, 0.0, 0.0).lerp(Vector3(-0.85 if r else -0.75, 0.0, 0.0), wb))
+	_set_arm_rot("fore_r", Vector3(-0.32 - maxf(0.0, swing) * 0.65, 0.0, 0.0).lerp(Vector3(-0.18 if r else -0.75, 0.0, 0.0), wb))
 
 func _ensure_collision_and_bar() -> void:
 	if get_node_or_null("CollisionShape3D") == null:
@@ -222,11 +272,9 @@ func _ensure_collision_and_bar() -> void:
 		add_child(cs)
 	_hp_bar_fill = get_node_or_null("HPBar/Fill") as MeshInstance3D
 
-
 func _update_hp_bar() -> void:
 	if _hp_bar_fill != null:
 		_hp_bar_fill.scale.x = clampf(current_hp / maxf(1.0, max_hp), 0.0, 1.0)
-
 
 func _collect_body_meshes() -> void:
 	_meshes.clear()
