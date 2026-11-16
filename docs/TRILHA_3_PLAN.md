@@ -35,6 +35,8 @@
 
 ### Identidade, Armas & Animações Personalizadas por Boss
 
+> **Ficha completa de comportamento, IA, telegrafia e ataques dos 3 Bosses:** ver [`docs/TRILHA_3_BOSSES_DESIGN.md`](TRILHA_3_BOSSES_DESIGN.md).
+
 | Boss | Papel | Armas como Boss | Animações Obrigatórias (`.glb`) | Ações & Anti-Cheese (`ArenaElevators`) |
 | :--- | :--- | :--- | :--- | :--- |
 | **Char 1: Valkyrie Skull** | Assalto Ágil | **Garras Duplas** (combo melee 3 hits) + **Rajada Térmica Carmesim** (média distância) | `Idle`, `Run_Predator`, `Side_Step`, `Leap_Slam`, `Attack_Melee`, `Attack_Ranged`, `Enrage_Roar` | **Side-Step** ágil se jogador mirar > `1 s`; **Leap Slam** saltando direto até o topo das plataformas elevatórias |

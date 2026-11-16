@@ -1,5 +1,10 @@
 # CHANGELOG — Projeto Isabela 3D
 
+## [2026-11-16 15:07] Ficha Completa de Comportamento & Ataques dos 3 Bosses (`TRILHA_3_BOSSES_DESIGN.md`)
+- **Backups criados**: `D:\Godot\isabela_scene_test\.backups\TRILHA_3_PLAN.md.20261116_150706.bak`, `CHANGELOG.md.20261116_150706.bak`.
+- **Criado [`docs/TRILHA_3_BOSSES_DESIGN.md`](file:///D:/Godot/isabela_scene_test/docs/TRILHA_3_BOSSES_DESIGN.md)**: ficha estruturada em 4 seções (*Identidade & Leitura Visual*, *Comportamento & Fluxo de IA*, *Movimentos & Kit de Ataques com Telegrafia* e *Skin Jogável*) para os 3 Bosses rotativos (`Valkyrie Skull`, `White Reaper`, `Anubis Phantom`).
+- **Atualizado [`docs/TRILHA_3_PLAN.md`](file:///D:/Godot/isabela_scene_test/docs/TRILHA_3_PLAN.md)**: adicionada referência direta para `docs/TRILHA_3_BOSSES_DESIGN.md` na seção *Identidade, Armas & Animações Personalizadas por Boss*.
+
 ## [2026-11-16 13:02] Design Completo da Trilha 3 (Bosses Rotativos, Desbloqueio de Skins & Arquétipos Buff/Debuff)
 - **Backups criados**: `D:\Godot\isabela_scene_test\.backups\TRILHA_3_PLAN.md.20261116_*.bak`, `CHANGELOG.md.20261116_*.bak`.
 - **Atualizado [`docs/TRILHA_3_PLAN.md`](file:///D:/Godot/isabela_scene_test/docs/TRILHA_3_PLAN.md)**:
