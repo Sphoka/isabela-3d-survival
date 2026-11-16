@@ -1,5 +1,10 @@
 # CHANGELOG — Projeto Isabela 3D
 
+## [2026-11-16 12:31] Planejamento da Trilha 3 & Atualização Completa do `GEMINI.md`
+- **Backups criados**: `D:\Godot\isabela_scene_test\.backups\GEMINI.md.20261116_123058.bak`, `CHANGELOG.md.20261116_123058.bak`.
+- **Adicionado [`docs/TRILHA_3_PLAN.md`](file:///D:/Godot/isabela_scene_test/docs/TRILHA_3_PLAN.md)**: especificação técnica detalhada da Trilha 3 para implementação posterior (`BossSentinel` + `OrbitalStrikeVFX` + `HUDBossBar`, `PlayerSkinHelper` com 4 skins + capacetes `SM_Helmet_A/B`, `HUDRadar` via `_draw()` e suíte TDD `test_trilha_3_boss_skins_radar.gd`), preservando trava `< 300` linhas e otimizações de VRAM/pooling.
+- **Atualizado [`GEMINI.md`](file:///D:/Godot/isabela_scene_test/GEMINI.md)**: documentada a arquitetura atual (`38` scripts, `7` cenas jogáveis, `14` suítes headless, CI `.github/workflows/godot-tests.yml`, invariantes de compressão VRAM e pooling `O(1)`) e adicionada a Seção 6 com contexto completo de continuidade para próximas sessões e colaboradores.
+
 ## [2026-11-16 12:16] Otimização de Desempenho, VRAM e Troca de Armas `O(1)`
 - **Backups criados**: `D:\Godot\isabela_scene_test\.backups\*.20261116_*.bak`.
 - **Troca de armas `O(1)` sem engasgos**:
