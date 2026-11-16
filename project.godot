@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Isabela Scene Test"
-run/main_scene="res://scenes/test_fase1_helmets.tscn"
+run/main_scene="res://scenes/game/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [editor_plugins]

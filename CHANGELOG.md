@@ -1,5 +1,15 @@
 # CHANGELOG — Projeto Isabela 3D
 
+## [2026-11-16 11:13] Cena Principal e Atalho do Desktop (`main_menu.tscn`)
+- **Backups criados**: `D:\Godot\isabela_scene_test\.backups\project.godot.20261116_111337.bak`, `CHANGELOG.md.20261116_111337.bak`, `Iniciar Isabela 3D.bat.20261116_111337.bak`.
+- **`project.godot` (linha 14)**:
+  - **Removido**: `run/main_scene="res://scenes/test_fase1_helmets.tscn"`
+  - **Adicionado**: `run/main_scene="res://scenes/game/main_menu.tscn"`
+  - **Motivo**: permitir que `F5` no editor Godot e a execução padrão do projeto abram diretamente o jogo pelo menu principal atualizado.
+- **`C:\Users\thiag\Desktop\Iniciar Isabela 3D.bat` (linhas 6–7)**:
+  - **Removido**: `SCENE_PATH=res://scenes/game/playable_arena.tscn` / `SCENE_FILE=%PROJECT_DIR%\scenes\game\playable_arena.tscn`
+  - **Adicionado**: `SCENE_PATH=res://scenes/game/main_menu.tscn` / `SCENE_FILE=%PROJECT_DIR%\scenes\game\main_menu.tscn`
+
 ## [2026-11-15] 3rd-Person Arm/Mesh Fix, Sniper Rifle (Slot 2), FPS Optic Transparency & Arena Elevators
 - **`assets/SK_Isabela/SK_Isabela_Leeloo.glb` & `scripts/game/player_animator.gd`**:
   - Fixed 3rd-person character distortions by removing stray hand/finger vertices and weights from `SK_Isabela_Leeloo_Legs`, removing jagged `SK_Isabela_Leeloo_Straps`, cleaning finger weights on `SK_Isabela_Top`, and pushing clothing/hair meshes cleanly outside `SK_Isabela_Body` (while keeping base `SK_Isabela.glb`, `main_isabela_scene.tscn`, and `test_fase1..5_*.tscn` untouched).
